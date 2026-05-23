@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: tns_erp_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tns_user
+      POSTGRES_PASSWORD: tns_password_2024
+      POSTGRES_DB: tns_erp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tns_user -d tns_erp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tns_erp_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://tns_user:tns_password_2024@db:5432/tns_erp?schema=public
+      JWT_SECRET: ${JWT_SECRET:-tns-super-secret-jwt-key-change-in-production}
+      NODE_ENV: production
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "npx prisma migrate deploy && npx prisma db seed && node server.js"
+
+volumes:
+  postgres_data:
+    driver: local

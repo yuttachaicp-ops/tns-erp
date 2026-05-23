@@ -1,0 +1,37 @@
+name: 📱 Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options: [preview, production]
+
+jobs:
+  build-android:
+    name: 📱 Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Expo dependencies
+        run: cd mobile && npm ci
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
+      - name: Build APK with EAS
+        working-directory: mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_API_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          eas build --platform android \
+                    --profile ${{ github.event.inputs.profile }} \
+                    --non-interactive \
+                    --no-wait
+      - name: Build complete
+        run: echo "✅ APK build submitted to EAS Build"

@@ -1,0 +1,139 @@
+// ── PRODUCTION SCHEMA (PostgreSQL) ──────────────────────────────────────────
+// ใช้สำหรับ deploy บน Render.com / Cloud
+// วิธีใช้: copy ไฟล์นี้ทับ schema.prisma แล้วรัน: npx prisma generate && npx prisma migrate deploy
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+enum PhotoStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ListingStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Platform {
+  SHOPEE
+  LAZADA
+  TIKTOK_SHOP
+  WEBSITE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum WorkStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  role         Role     @default(STAFF)
+  isActive     Boolean  @default(true)
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  photoQueues    PhotoQueue[]
+  listingQueues  ListingQueue[]
+  dailyLogs      DailyLog[]
+  activityLogs   ActivityLog[]
+
+  @@map("users")
+}
+
+model PhotoQueue {
+  id           String      @id @default(cuid())
+  productName  String
+  sku          String?
+  category     String?
+  quantity     Int         @default(1)
+  receivedDate DateTime    @default(now())
+  status       PhotoStatus @default(PENDING)
+  note         String?
+  createdBy    String
+  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime    @default(now())
+
+  user User @relation(fields: [createdBy], references: [id])
+
+  @@map("photo_queue")
+}
+
+model ListingQueue {
+  id          String        @id @default(cuid())
+  productName String
+  sku         String?
+  platform    Platform
+  quantity    Int           @default(1)
+  status      ListingStatus @default(PENDING)
+  assignedTo  String?
+  note        String?
+  createdBy   String
+  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime      @default(now())
+
+  user User @relation(fields: [createdBy], references: [id])
+
+  @@map("listing_queue")
+}
+
+model DailyLog {
+  id           String     @id @default(cuid())
+  workTitle    String
+  workDetail   String?
+  workCategory String     @default("ทั่วไป")
+  priority     Priority   @default(MEDIUM)
+  status       WorkStatus @default(TODO)
+  assignedUser String?
+  workDate     DateTime   @default(now())
+  workTime     String?
+  createdBy    String
+  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime   @default(now())
+
+  user User @relation(fields: [createdBy], references: [id])
+
+  @@map("daily_logs")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  module    String
+  detail    String?
+  userId    String
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}

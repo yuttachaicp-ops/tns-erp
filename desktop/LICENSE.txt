@@ -1,0 +1,3 @@
+TNS ERP - Daily Operations System
+Copyright (c) 2024 TNS Company
+All rights reserved.
