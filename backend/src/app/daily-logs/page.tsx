@@ -84,7 +84,7 @@ export default function DailyLogsPage() {
                   <StatusBadge status={item.status} />
                   <span style={{fontSize:'12px',padding:'3px 8px',borderRadius:'999px',background:'rgba(148,163,184,0.1)',color:'#94a3b8'}}>{item.workCategory}</span>
                 </div>
-                {item.workDetail && <p style={{color:'#94a3b8',fontSize:'13px',margin:'0 0 8px'}}>{item.workDetail}</p>}
+                {item.workDetail && <p style={{color:'#94a3b8',fontSize:'13px',margin:'0 0 8px',whiteSpace:'pre-wrap'}}>{item.workDetail}</p>}
                 <div style={{display:'flex',gap:'16px',fontSize:'12px',color:'#4a5568'}}>
                   {item.assignedUser && <span>👤 {item.assignedUser}</span>}
                   <span>📅 {new Date(item.workDate).toLocaleDateString('th-TH')}</span>
