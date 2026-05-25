@@ -5,14 +5,14 @@ import { z } from 'zod'
 
 const schema = z.object({
   workTitle: z.string().min(1).optional(),
-  workDetail: z.string().optional(),
+  workDetail: z.string().nullish(),
   workCategory: z.string().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
   status: z.enum(['TODO', 'IN_PROGRESS', 'DONE', 'CANCELLED']).optional(),
-  assignedUser: z.string().optional(),
-  workDate: z.string().optional(),
-  workTime: z.string().optional(),
-})
+  assignedUser: z.string().nullish(),
+  workDate: z.string().nullish(),
+  workTime: z.string().nullish(),
+}).passthrough()
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getAuthUser(req)
@@ -28,9 +28,17 @@ async function handleUpdate(req: NextRequest, id: string) {
   try {
     const body = await req.json()
     const data = schema.parse(body)
-    const updateData: Record<string, unknown> = { ...data }
+    const updateData: Record<string, unknown> = {}
+    if (data.workTitle !== undefined) updateData.workTitle = data.workTitle
+    if (data.workDetail !== undefined) updateData.workDetail = data.workDetail
+    if (data.workCategory !== undefined) updateData.workCategory = data.workCategory
+    if (data.priority !== undefined) updateData.priority = data.priority
+    if (data.status !== undefined) updateData.status = data.status
+    if (data.assignedUser !== undefined) updateData.assignedUser = data.assignedUser
+    if (data.workTime !== undefined) updateData.workTime = data.workTime
     if (data.workDate) {
-      updateData.workDate = new Date(data.workDate + 'T00:00:00.000Z')
+      const dateStr = data.workDate as string
+      updateData.workDate = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T00:00:00.000Z')
     }
     const item = await prisma.dailyLog.update({
       where: { id },
