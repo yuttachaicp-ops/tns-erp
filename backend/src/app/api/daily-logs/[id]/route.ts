@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   return successResponse(item)
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+async function handleUpdate(req: NextRequest, id: string) {
   const session = await getAuthUser(req)
   if (!session) return errorResponse('Unauthorized', 401)
   try {
@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       updateData.workDate = new Date(data.workDate + 'T00:00:00.000Z')
     }
     const item = await prisma.dailyLog.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     })
     await logActivity(session.userId, 'UPDATE', 'DAILY_LOGS', `แก้ไขงาน: ${item.workTitle}`)
@@ -42,6 +42,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (e instanceof z.ZodError) return errorResponse('ข้อมูลไม่ถูกต้อง', 422)
     return errorResponse('เกิดข้อผิดพลาด', 500)
   }
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  return handleUpdate(req, params.id)
+}
+
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  return handleUpdate(req, params.id)
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
