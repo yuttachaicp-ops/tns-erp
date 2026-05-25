@@ -17,14 +17,12 @@ const schema = z.object({
 export async function GET(req: NextRequest) {
   const session = await getAuthUser(req)
   if (!session) return errorResponse('Unauthorized', 401)
-
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
   const date = searchParams.get('date')
   const search = searchParams.get('search')
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '20')
-
   const where: Record<string, unknown> = {}
   if (status) where.status = status
   if (date) {
@@ -33,7 +31,6 @@ export async function GET(req: NextRequest) {
     where.workDate = { gte: d, lt: next }
   }
   if (search) where.workTitle = { contains: search, mode: 'insensitive' }
-
   const [items, total] = await Promise.all([
     prisma.dailyLog.findMany({
       where,
@@ -44,19 +41,28 @@ export async function GET(req: NextRequest) {
     }),
     prisma.dailyLog.count({ where }),
   ])
-
   return successResponse({ items, total, page, limit, pages: Math.ceil(total / limit) })
 }
 
 export async function POST(req: NextRequest) {
   const session = await getAuthUser(req)
   if (!session) return errorResponse('Unauthorized', 401)
-
   try {
     const body = await req.json()
     const data = schema.parse(body)
+    const workDate = data.workDate ? new Date(data.workDate + 'T00:00:00.000Z') : new Date()
     const item = await prisma.dailyLog.create({
-      data: { ...data, createdBy: session.userId },
+      data: {
+        workTitle: data.workTitle,
+        workDetail: data.workDetail,
+        workCategory: data.workCategory,
+        priority: data.priority,
+        status: data.status,
+        assignedUser: data.assignedUser || null,
+        workDate,
+        workTime: data.workTime || null,
+        createdBy: session.userId,
+      },
     })
     await logActivity(session.userId, 'CREATE', 'DAILY_LOGS', `เพิ่มงาน: ${item.workTitle}`)
     return successResponse(item, 201)
