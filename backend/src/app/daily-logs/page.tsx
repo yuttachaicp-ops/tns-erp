@@ -5,7 +5,7 @@ import Header from '@/components/layout/Header'
 import Modal from '@/components/ui/Modal'
 import { StatusBadge, PriorityBadge } from '@/components/ui/StatusBadge'
 
-interface LogItem { id: string; workTitle: string; workDetail?: string; workCategory: string; priority: string; status: string; assignedUser?: string; workDate: string; workTime?: string }
+interface LogItem { id: string; workTitle: string; workDetail?: string; workCategory: string; priority: string; status: string; assignedUser?: string; workDate: string; workTime?: string; createdAt: string; updatedAt: string }
 const EMPTY: Partial<LogItem> = { workTitle:'', workDetail:'', workCategory:'ทั่วไป', priority:'MEDIUM', status:'TODO', assignedUser:'', workTime:'' }
 
 const CATEGORIES = ['ทั่วไป','ถ่ายรูป','ลงขาย','แพ็คสินค้า','จัดส่ง','ติดต่อลูกค้า','รับสินค้า','อื่นๆ']
@@ -89,6 +89,9 @@ export default function DailyLogsPage() {
                   {item.assignedUser && <span>👤 {item.assignedUser}</span>}
                   <span>📅 {new Date(item.workDate).toLocaleDateString('th-TH')}</span>
                   {item.workTime && <span>🕐 {item.workTime}</span>}
+                  {item.updatedAt && item.createdAt && new Date(item.updatedAt).getTime() - new Date(item.createdAt).getTime() > 5000 && (
+                    <span style={{color:'#6366f1'}}>✏️ แก้ไขล่าสุด {new Date(item.updatedAt).toLocaleString('th-TH', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+                  )}
                 </div>
               </div>
               <div style={{display:'flex',gap:'6px',flexShrink:0}}>
