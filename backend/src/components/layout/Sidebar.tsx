@@ -1,15 +1,62 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 
-const MENU = [
+const WORK_MENU = [
   { href: '/dashboard', icon: '📊', label: 'Dashboard' },
-  { href: '/photo-queue', icon: '📷', label: 'สินค้ารอถ่ายรูป' },
+  { href: '/photo-queue', icon: '📷', label: 'สินค้าถ่ายรูป' },
   { href: '/listing-queue', icon: '🛒', label: 'สินค้ายังไม่ได้ลงขาย' },
   { href: '/daily-logs', icon: '📝', label: 'บันทึกงานประจำวัน' },
   { href: '/users', icon: '👥', label: 'ผู้ใช้งาน' },
   { href: '/activity-logs', icon: '📋', label: 'Activity Logs' },
 ]
+
+const PERSONAL_MENU = [
+  { href: '/personal', icon: '🏠', label: 'Dashboard' },
+  { href: '/income-expense', icon: '💰', label: 'รายรับ-รายจ่าย' },
+  { href: '/bills', icon: '🧾', label: 'บิลรายเดือน' },
+]
+
+function MenuLink({ href, icon, label, active }: { href: string; icon: string; label: string; active: boolean }) {
+  return (
+    <Link href={href} style={{
+      display:'flex', alignItems:'center', gap:'10px',
+      padding:'9px 12px', borderRadius:'10px', marginBottom:'2px',
+      background: active ? 'rgba(99,102,241,0.2)' : 'transparent',
+      color: active ? '#818cf8' : '#94a3b8',
+      textDecoration:'none', fontSize:'14px', fontWeight: active ? '600' : '400',
+      transition:'all 0.15s', borderLeft: active ? '2px solid #6366f1' : '2px solid transparent',
+    }}>
+      <span style={{fontSize:'15px'}}>{icon}</span>
+      <span>{label}</span>
+    </Link>
+  )
+}
+
+function Section({ title, icon, items, pathname, defaultOpen }: { title: string; icon: string; items: typeof WORK_MENU; pathname: string; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div style={{marginBottom:'4px'}}>
+      <button onClick={() => setOpen(!open)} style={{
+        width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+        padding:'8px 12px', borderRadius:'8px', background:'transparent',
+        border:'none', color:'#64748b', fontSize:'12px', fontWeight:'700',
+        cursor:'pointer', letterSpacing:'0.05em', textTransform:'uppercase',
+      }}>
+        <span style={{display:'flex',alignItems:'center',gap:'6px'}}>{icon} {title}</span>
+        <span style={{transition:'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', fontSize:'10px'}}>▼</span>
+      </button>
+      {open && (
+        <div style={{paddingLeft:'4px'}}>
+          {items.map(item => (
+            <MenuLink key={item.href} {...item} active={pathname.startsWith(item.href)} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Sidebar({ user }: { user: { name: string; role: string; email: string } }) {
   const pathname = usePathname()
@@ -36,24 +83,10 @@ export default function Sidebar({ user }: { user: { name: string; role: string; 
       </div>
 
       {/* Navigation */}
-      <nav style={{padding:'8px',flex:1}}>
-        {MENU.map(item => {
-          const active = pathname.startsWith(item.href)
-          return (
-            <Link key={item.href} href={item.href}
-              style={{
-                display:'flex', alignItems:'center', gap:'10px',
-                padding:'10px 12px', borderRadius:'10px', marginBottom:'2px',
-                background: active ? 'rgba(99,102,241,0.2)' : 'transparent',
-                color: active ? '#818cf8' : '#94a3b8',
-                textDecoration:'none', fontSize:'14px', fontWeight: active ? '600' : '400',
-                transition:'all 0.15s', borderLeft: active ? '2px solid #6366f1' : '2px solid transparent',
-              }}>
-              <span style={{fontSize:'16px'}}>{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          )
-        })}
+      <nav style={{padding:'8px',flex:1,overflowY:'auto'}}>
+        <Section title="สำหรับงาน" icon="💼" items={WORK_MENU} pathname={pathname} defaultOpen={true} />
+        <div style={{height:'1px',background:'#2d3154',margin:'8px 4px'}} />
+        <Section title="ส่วนตัว" icon="👤" items={PERSONAL_MENU} pathname={pathname} defaultOpen={true} />
       </nav>
 
       {/* User Info */}
