@@ -65,6 +65,9 @@ model User {
   listingQueues  ListingQueue[]
   dailyLogs      DailyLog[]
   activityLogs   ActivityLog[]
+  transactions  Transaction[]
+  bills         Bill[]
+  billPayments  BillPayment[]
 
   @@map("users")
 }
@@ -136,4 +139,45 @@ model ActivityLog {
   user User @relation(fields: [userId], references: [id])
 
   @@map("activity_logs")
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  type        String
+  amount      Float
+  category    String
+  description String?
+  date        DateTime @default(now())
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [createdBy], references: [id])
+  @@map("transactions")
+}
+
+model Bill {
+  id        String        @id @default(cuid())
+  name      String
+  amount    Float
+  dueDay    Int
+  category  String        @default("อื่นๆ")
+  note      String?
+  createdBy String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [createdBy], references: [id])
+  payments  BillPayment[]
+  @@map("bills")
+}
+
+model BillPayment {
+  id        String   @id @default(cuid())
+  billId    String
+  month     String
+  paidAt    DateTime @default(now())
+  createdBy String
+  bill      Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [createdBy], references: [id])
+  @@unique([billId, month])
+  @@map("bill_payments")
 }
