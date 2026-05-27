@@ -7,6 +7,9 @@ const WORK_MENU = [
   { href:'/photo-queue', icon:'📷', label:'สินค้าถ่ายรูป' },
   { href:'/listing-queue', icon:'🛒', label:'สินค้ายังไม่ได้ลงขาย' },
   { href:'/daily-logs', icon:'📝', label:'บันทึกงานประจำวัน' },
+
+]
+const SETTING_MENU = [
   { href:'/users', icon:'👥', label:'ผู้ใช้งาน' },
   { href:'/activity-logs', icon:'📋', label:'Activity Logs' },
 ]
@@ -22,8 +25,8 @@ function MenuLink({ href, icon, label, active, onClick }: { href:string; icon:st
     </Link>
   )
 }
-function Section({ title, icon, items, pathname, onLinkClick }: { title:string; icon:string; items:typeof WORK_MENU; pathname:string; onLinkClick?:()=>void }) {
-  const [open, setOpen] = useState(true)
+function Section({ title, icon, items, pathname, onLinkClick, defaultOpen=true }: { title:string; icon:string; items:typeof WORK_MENU; pathname:string; onLinkClick?:()=>void; defaultOpen?:boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
     <div style={{marginBottom:'4px'}}>
       <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',borderRadius:'8px',background:'transparent',border:'none',color:'#64748b',fontSize:'12px',fontWeight:'700',cursor:'pointer',letterSpacing:'0.05em',textTransform:'uppercase'}}>
@@ -66,6 +69,8 @@ export default function Sidebar({ user, open, isMobile, onClose }: { user:{ name
         <Section title="สำหรับงาน" icon="💼" items={WORK_MENU} pathname={pathname} onLinkClick={isMobile?onClose:undefined} />
         <div style={{height:'1px',background:'#2d3154',margin:'8px 4px'}} />
         <Section title="ส่วนตัว" icon="👤" items={PERSONAL_MENU} pathname={pathname} onLinkClick={isMobile?onClose:undefined} />
+        <div style={{height:'1px',background:'#2d3154',margin:'8px 4px'}} />
+        <Section title="ตั้งค่า" icon="⚙️" items={SETTING_MENU} pathname={pathname} onLinkClick={isMobile?onClose:undefined} defaultOpen={false} />
       </nav>
       <div style={{padding:'12px 16px',borderTop:'1px solid #2d3154'}}>
         <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'8px'}}>
