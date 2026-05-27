@@ -19,9 +19,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const status = searchParams.get('status')
   const platform = searchParams.get('platform')
+  const reason = searchParams.get('reason')
   const where: Record<string,unknown> = {}
   if (status) where.status = status
   if (platform) where.platform = platform
+    if (reason) where.reason = reason
   const [items, total] = await Promise.all([
     prisma.stockClose.findMany({ where, orderBy:{ createdAt:'desc' } }),
     prisma.stockClose.count({ where }),
