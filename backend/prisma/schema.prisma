@@ -25,6 +25,10 @@ model User {
   bills         Bill[]
   billPayments  BillPayment[]
   stockCloses  StockClose[]
+
+  catProfile    CatProfile?
+  catDailyLogs  CatDailyLog[]
+  catVetVisits  CatVetVisit[]
   @@map("users")
 }
 
@@ -146,4 +150,55 @@ model StockClose {
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [createdBy], references: [id])
   @@map("stock_close")
+}
+model CatProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  name      String   @default("")
+  age       String?
+  gender    String?
+  breed     String?
+  weight    Float?
+  diagnosis String?
+  clinic    String?
+  doctor    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  @@map("cat_profiles")
+}
+
+model CatDailyLog {
+  id          String   @id @default(cuid())
+  userId      String
+  logDate     DateTime @default(now())
+  medicine    String?
+  foodIntake  String?
+  waterIntake String?
+  excretion   String?
+  behavior    String?
+  temperature Float?
+  weight      Float?
+  symptoms    String?
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+  @@map("cat_daily_logs")
+}
+
+model CatVetVisit {
+  id               String   @id @default(cuid())
+  userId           String
+  visitDate        DateTime @default(now())
+  results          String?
+  bloodValues      String?
+  additionalDiag   String?
+  medicationChange String?
+  cost             Float?
+  note             String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id])
+  @@map("cat_vet_visits")
 }

@@ -17,7 +17,7 @@ const SETTING_MENU = [
 const PERSONAL_MENU = [
   { href:'/personal', icon:'🏠', label:'Dashboard' },
   { href:'/income-expense', icon:'💰', label:'รายรับ-รายจ่าย' },
-  { href:'/bills', icon:'🧾', label:'บิลรายเดือน' },
+  { href:'/personal/cat-health',icon:'🐾',label:'สุขภาพแมวน้อย'},{href:'/bills', icon:'🧾', label:'บิลรายเดือน' },
 ]
 function MenuLink({ href, icon, label, active, onClick }: { href:string; icon:string; label:string; active:boolean; onClick?:()=>void }) {
   return (
