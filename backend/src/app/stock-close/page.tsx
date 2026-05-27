@@ -16,14 +16,14 @@ const E0:Partial<Item>={productName:'',sku:'',category:'',platform:'ALL',quantit
 export default function Page(){
   const[items,setItems]=useState<Item[]>([])
   const[total,setTotal]=useState(0)
-  const[sf,setSf]=useState(''),[sp,setSp]=useState('')
+  const[sf,setSf]=useState(''),[sp,setSp]=useState(''),[sr,setSr]=useState('')
   const[modal,setModal]=useState(false),[ed,setEd]=useState<Partial<Item>>(E0),[isEdit,setIsEdit]=useState(false)
   const fetch2=useCallback(async()=>{
     const tok=localStorage.getItem('tns-token')
-    const q=new URLSearchParams();if(sf)q.set('status',sf);if(sp)q.set('platform',sp)
+    const q=new URLSearchParams();if(sf)q.set('status',sf);if(sp)q.set('platform',sp);if(sr)q.set('reason',sr)
     const r=await fetch(`/api/stock-close?${q}`,{headers:{Authorization:`Bearer ${tok}`}})
     const d=await r.json();if(d.success){setItems(d.data.items);setTotal(d.data.total)}
-  },[sf,sp])
+  },[sf,sp,sr])
   useEffect(()=>{fetch2()},[fetch2])
   async function save(){
     const tok=localStorage.getItem('tns-token')
@@ -50,6 +50,10 @@ export default function Page(){
           <option value="PENDING">รอดำเนินการ</option>
           <option value="PROCESSING">กำลังดำเนินการ</option>
           <option value="DONE">ดำเนินการแล้ว</option>
+        </select>
+        <select value={sr} onChange={e=>setSr(e.target.value)} style={{padding:'10px 14px',borderRadius:'10px',background:'#1a1d2e',border:'1px solid #2d3154',color:'white',outline:'none'}}>
+          <option value="">เหตุผลทั้งหมด</option>
+          {REASONS.map(r=><option key={r} value={r}>{r}</option>)}
         </select>
         <select value={sp} onChange={e=>setSp(e.target.value)} style={{padding:'10px 14px',borderRadius:'10px',background:'#1a1d2e',border:'1px solid #2d3154',color:'white',outline:'none'}}>
           <option value="">ทุกแพลตฟอร์ม</option>
