@@ -21,6 +21,9 @@ model User {
   listingQueues ListingQueue[]
   dailyLogs     DailyLog[]
   activityLogs  ActivityLog[]
+  transactions  Transaction[]
+  bills         Bill[]
+  billPayments  BillPayment[]
   @@map("users")
 }
 
