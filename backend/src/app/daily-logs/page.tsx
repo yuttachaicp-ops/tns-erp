@@ -31,7 +31,7 @@ export default function DailyLogsPage() {
     const d = await res.json()
     if (d.success) { setItems(d.data.items); setTotal(d.data.total) }
     setLoading(false)
-  }, [filter])
+  }, [filter, sort])
 
   useEffect(() => { fetchData() }, [fetchData])
 
