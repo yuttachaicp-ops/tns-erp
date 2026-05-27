@@ -35,6 +35,8 @@ export async function GET(req: NextRequest) {
   const order = (searchParams.get('order') || 'desc') as 'asc' | 'desc'
   const orderBy = sortBy === 'workDate'
     ? [{ workDate: order }, { createdAt: 'desc' as const }]
+    : sortBy === 'updatedAt'
+    ? [{ updatedAt: order }]
     : [{ createdAt: order }]
 
   const [items, total] = await Promise.all([

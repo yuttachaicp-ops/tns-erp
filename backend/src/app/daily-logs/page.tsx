@@ -75,6 +75,8 @@ export default function DailyLogsPage() {
             <option value="createdAt_asc">📅 บันทึกเก่าสุดก่อน</option>
             <option value="workDate_desc">🗓️ วันทำงานใหม่สุดก่อน</option>
             <option value="workDate_asc">🗓️ วันทำงานเก่าสุดก่อน</option>
+            <option value="updatedAt_desc">✏️ แก้ไขล่าสุดก่อน</option>
+            <option value="updatedAt_asc">✏️ แก้ไขเก่าสุดก่อน</option>
           </select>
           <button onClick={() => { setEditing({...EMPTY, workDate: new Date().toISOString().split('T')[0]}); setIsEdit(false); setModal(true) }}
             style={{marginLeft:'auto',padding:'10px 20px',borderRadius:'10px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'white',border:'none',cursor:'pointer',fontWeight:'600'}}>
