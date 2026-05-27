@@ -4,7 +4,7 @@ import AppShell from '@/components/layout/AppShell'
 import Header from '@/components/layout/Header'
 import Modal from '@/components/ui/Modal'
 const IC=['เงินเดือน','โบนัส','รายได้จากธุรกิจ','ค่าเช่า','อื่นๆ']
-const EC=['อาหาร','ค่าเดินทาง','ค่าสาธารณูปโภค','ช้อปปิ้ง','บันเทิง','สุขภาพ','อื่นๆ']
+const EC=['อาหาร','ค่าเดินทาง','ค่าสาธารณูปโภค','ช้อปปิ้ง','บันเทิง','สุขภาพ','ค่าขนมแมวน้อย','ค่ารักษาแมวน้อย','อื่นๆ']
 interface T{id:string;type:string;amount:number;category:string;description?:string;date:string}
 const E0:Partial<T>={type:'EXPENSE',amount:0,category:'อาหาร',description:'',date:''}
 const fmt=(n:number)=>n.toLocaleString('th-TH',{minimumFractionDigits:2})
