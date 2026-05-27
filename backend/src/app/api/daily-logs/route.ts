@@ -31,10 +31,16 @@ export async function GET(req: NextRequest) {
     where.workDate = { gte: d, lt: next }
   }
   if (search) where.workTitle = { contains: search, mode: 'insensitive' }
+  const sortBy = searchParams.get('sortBy') || 'createdAt'
+  const order = (searchParams.get('order') || 'desc') as 'asc' | 'desc'
+  const orderBy = sortBy === 'workDate'
+    ? [{ workDate: order }, { createdAt: 'desc' as const }]
+    : [{ createdAt: order }]
+
   const [items, total] = await Promise.all([
     prisma.dailyLog.findMany({
       where,
-      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+      orderBy,
       skip: (page - 1) * limit,
       take: limit,
       include: { user: { select: { name: true } } },

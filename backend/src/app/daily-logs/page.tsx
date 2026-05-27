@@ -18,12 +18,15 @@ export default function DailyLogsPage() {
   const [editing, setEditing] = useState<Partial<LogItem>>(EMPTY)
   const [isEdit, setIsEdit] = useState(false)
   const [filter, setFilter] = useState('')
+  const [sort, setSort] = useState('createdAt_desc')
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     const token = localStorage.getItem('tns-token')
     const q = new URLSearchParams()
     if (filter) q.set('status', filter)
+    const [sortBy, order] = sort.split('_')
+    q.set('sortBy', sortBy); q.set('order', order)
     const res = await fetch(`/api/daily-logs?${q}`, { headers: { Authorization: `Bearer ${token}` } })
     const d = await res.json()
     if (d.success) { setItems(d.data.items); setTotal(d.data.total) }
@@ -65,6 +68,13 @@ export default function DailyLogsPage() {
             <option value="IN_PROGRESS">กำลังทำ</option>
             <option value="DONE">เสร็จ</option>
             <option value="CANCELLED">ยกเลิก</option>
+          </select>
+          <select value={sort} onChange={e => setSort(e.target.value)}
+            style={{padding:'10px 14px',borderRadius:'10px',background:'#1a1d2e',border:'1px solid #2d3154',color:'white',outline:'none'}}>
+            <option value="createdAt_desc">📅 บันทึกล่าสุดก่อน</option>
+            <option value="createdAt_asc">📅 บันทึกเก่าสุดก่อน</option>
+            <option value="workDate_desc">🗓️ วันทำงานใหม่สุดก่อน</option>
+            <option value="workDate_asc">🗓️ วันทำงานเก่าสุดก่อน</option>
           </select>
           <button onClick={() => { setEditing({...EMPTY, workDate: new Date().toISOString().split('T')[0]}); setIsEdit(false); setModal(true) }}
             style={{marginLeft:'auto',padding:'10px 20px',borderRadius:'10px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'white',border:'none',cursor:'pointer',fontWeight:'600'}}>
