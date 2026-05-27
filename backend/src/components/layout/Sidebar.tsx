@@ -7,6 +7,7 @@ const WORK_MENU = [
   { href:'/photo-queue', icon:'📷', label:'สินค้าถ่ายรูป' },
   { href:'/listing-queue', icon:'🛒', label:'สินค้ายังไม่ได้ลงขาย' },
   { href:'/daily-logs', icon:'📝', label:'บันทึกงานประจำวัน' },
+  { href:'/stock-close', icon:'🚫', label:'แจ้งปิดสต็อก' },
 
 ]
 const SETTING_MENU = [

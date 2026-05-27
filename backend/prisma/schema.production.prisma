@@ -69,6 +69,7 @@ model User {
   bills         Bill[]
   billPayments  BillPayment[]
 
+  stockCloses  StockClose[]
   @@map("users")
 }
 
@@ -180,4 +181,22 @@ model BillPayment {
   user      User     @relation(fields: [createdBy], references: [id])
   @@unique([billId, month])
   @@map("bill_payments")
+}
+
+model StockClose {
+  id           String   @id @default(cuid())
+  productName  String
+  sku          String?
+  category     String?
+  platform     String   @default("ALL")
+  quantity     Int      @default(0)
+  reason       String   @default("หมดสต็อก")
+  status       String   @default("PENDING")
+  notifiedDate DateTime @default(now())
+  note         String?
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [createdBy], references: [id])
+  @@map("stock_close")
 }
