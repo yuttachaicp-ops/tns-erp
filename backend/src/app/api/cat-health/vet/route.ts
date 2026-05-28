@@ -7,20 +7,20 @@ async function auth(req:NextRequest){
   catch{return null}
 }
 export async function GET(req:NextRequest){
-  const u=await auth(req);if(!u)return NextResponse.json({success:false},{status:401})
+  const u=await auth(req);if(!u)return NextResponse.json({error:'Unauthorized'},{status:401})
   const catId=new URL(req.url).searchParams.get('catId')
   const items=await prisma.catVetVisit.findMany({where:{userId:u.userId,...(catId?{catId}:{})},orderBy:{visitDate:'desc'}})
-  return NextResponse.json({success:true,data:items})
+  return NextResponse.json(items)
 }
 export async function POST(req:NextRequest){
-  const u=await auth(req);if(!u)return NextResponse.json({success:false},{status:401})
+  const u=await auth(req);if(!u)return NextResponse.json({error:'Unauthorized'},{status:401})
   const b=await req.json()
   const item=await prisma.catVetVisit.create({data:{
-    userId:u.userId,catId:b.catId||'',
+    userId:u.userId,catId:b.catId,
     visitDate:b.visitDate?new Date(b.visitDate):new Date(),
     results:b.results||null,bloodValues:b.bloodValues||null,
     additionalDiag:b.additionalDiag||null,medicationChange:b.medicationChange||null,
     cost:b.cost?parseFloat(b.cost):null,note:b.note||null
   }})
-  return NextResponse.json({success:true,data:item})
+  return NextResponse.json(item)
 }

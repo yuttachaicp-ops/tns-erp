@@ -10,15 +10,16 @@ export async function GET(req:NextRequest){
   const u=await auth(req);if(!u)return NextResponse.json({success:false},{status:401})
   const{searchParams}=new URL(req.url)
   const month=searchParams.get('month')||new Date().toISOString().slice(0,7)
+  const catId=searchParams.get('catId')
   const start=new Date(`${month}-01`);const end=new Date(start);end.setMonth(end.getMonth()+1)
-  const items=await prisma.catDailyLog.findMany({where:{userId:u.userId,logDate:{gte:start,lt:end}},orderBy:{logDate:'desc'}})
+  const items=await prisma.catDailyLog.findMany({where:{userId:u.userId,...(catId?{catId}:{}),logDate:{gte:start,lt:end}},orderBy:{logDate:'desc'}})
   return NextResponse.json({success:true,data:items})
 }
 export async function POST(req:NextRequest){
   const u=await auth(req);if(!u)return NextResponse.json({success:false},{status:401})
   const b=await req.json()
   const item=await prisma.catDailyLog.create({data:{
-    userId:u.userId,logDate:b.logDate?new Date(b.logDate):new Date(),
+    userId:u.userId,catId:b.catId,logDate:b.logDate?new Date(b.logDate):new Date(),
     medicine:b.medicine||null,foodIntake:b.foodIntake||null,waterIntake:b.waterIntake||null,
     excretion:b.excretion||null,behavior:b.behavior||null,
     temperature:b.temperature?parseFloat(b.temperature):null,

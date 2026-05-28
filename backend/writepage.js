@@ -1,0 +1,10 @@
+var fs=require('fs');
+var p='src/app/personal/cat-health/page.tsx';
+var c=[];
+c.push("'use client'");
+c.push("import{useState,useEffect,useCallback}from 'react'");
+c.push("import Header from '@/components/layout/Header'");
+c.push("import Modal from '@/components/ui/Modal'");
+c.push("import{CSSProperties}from 'react'");
+fs.writeFileSync(p,c.join('\n'),'utf8');
+console.log('header written');

@@ -1,0 +1,10 @@
+var fs=require('fs');
+var p='src/app/personal/cat-health/page.tsx';
+var c=fs.readFileSync(p,'utf8');
+c=c.replace(/padding:'4px[\s\S]{1,3}12px'/g,"padding:'4px 12px'");
+c=c.replace(/padding:'10px[\s\S]{1,3}20px'/g,"padding:'10px 20px'");
+c=c.replace(/padding:'10px[\s\S]{1,3}24px'/g,"padding:'10px 24px'");
+c=c.replace(/padding:'8px[\s\S]{1,3}16px'/g,"padding:'8px 16px'");
+c=c.replace(/padding:'8px[\s\S]{1,3}12px'/g,"padding:'8px 12px'");
+fs.writeFileSync(p,c,'utf8');
+console.log('Fixed: '+p);
