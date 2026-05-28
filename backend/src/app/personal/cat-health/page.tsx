@@ -95,6 +95,8 @@ export default function CatHealth() {
   const [catMod, setCatMod] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [catEd, setCatEd] = useState<Partial<Cat>>(EC)
+  const [catSaving, setCatSaving] = useState(false)
+  const [catErr, setCatErr] = useState('')
   const [catIsE, setCatIsE] = useState(false)
   const [logs, setLogs] = useState<DLog[]>([])
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
@@ -138,9 +140,14 @@ export default function CatHealth() {
   const selectedCat = cats.find(c => c.id === catId)
 
   async function saveCat() {
-    const url = catIsE ? `/api/cat-health/cats/${catEd.id}` : '/api/cat-health/cats'
-    const r = await fetch(url, { method: catIsE ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify(catEd) })
-    if (r.ok) { const d = await r.json(); setCatMod(false); setCatEd(EC); setCatIsE(false); await fetchCats(); if (!catIsE) setCatId(d.id) }
+    setCatSaving(true); setCatErr('')
+    try {
+      const url = catIsE ? `/api/cat-health/cats/${catEd.id}` : '/api/cat-health/cats'
+      const r = await fetch(url, { method: catIsE ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify(catEd) })
+      if (r.ok) { const d = await r.json(); setCatMod(false); setCatEd(EC); setCatIsE(false); await fetchCats(); if (!catIsE) setCatId(d.id) }
+      else { const e = await r.json().catch(() => ({})); setCatErr(e.error || `บันทึกไม่สำเร็จ (${r.status})`) }
+    } catch (e: any) { setCatErr('เกิดข้อผิดพลาด: ' + e.message) }
+    finally { setCatSaving(false) }
   }
   async function delCat(id: string) {
     if (!confirm('ลบแมวตัวนี้และข้อมูลทั้งหมด?')) return
@@ -386,29 +393,37 @@ export default function CatHealth() {
                   onChange={e => {
                     const file = e.target.files?.[0]
                     if (!file) return
+                    setCatErr('')
+                    if (file.size > 5 * 1024 * 1024) { setCatErr('รูปใหญ่เกิน 5MB กรุณาเลือกรูปที่เล็กกว่า'); return }
                     const reader = new FileReader()
                     reader.onload = ev => {
                       const dataUrl = ev.target?.result as string
-                      const img = new Image()
-                      img.onload = () => {
-                        try {
-                          const MAX = 400
-                          const ratio = Math.min(MAX / img.width, MAX / img.height, 1)
-                          const w = Math.round(img.width * ratio)
-                          const h = Math.round(img.height * ratio)
-                          const canvas = document.createElement('canvas')
-                          canvas.width = w; canvas.height = h
-                          const ctx = canvas.getContext('2d')
-                          if (!ctx) { setCatEd(prev => ({ ...prev, avatar: dataUrl })); return }
-                          ctx.drawImage(img, 0, 0, w, h)
-                          setCatEd(prev => ({ ...prev, avatar: canvas.toDataURL('image/jpeg', 0.82) }))
-                        } catch { setCatEd(prev => ({ ...prev, avatar: dataUrl })) }
-                      }
-                      img.onerror = () => setCatEd(prev => ({ ...prev, avatar: dataUrl }))
-                      img.src = dataUrl
+                      if (!dataUrl || !dataUrl.startsWith('data:')) { setCatErr('อ่านไฟล์ไม่ได้'); return }
+                      // resize ด้วย canvas ถ้าทำได้ ไม่งั้นใช้ตรงๆ
+                      try {
+                        const img = new Image()
+                        img.onload = () => {
+                          try {
+                            const MAX = 500
+                            const ratio = Math.min(MAX / img.width, MAX / img.height, 1)
+                            if (ratio >= 1) { setCatEd(prev => ({ ...prev, avatar: dataUrl })); return }
+                            const w = Math.round(img.width * ratio)
+                            const h = Math.round(img.height * ratio)
+                            const canvas = document.createElement('canvas')
+                            canvas.width = w; canvas.height = h
+                            const ctx = canvas.getContext('2d')
+                            if (!ctx) { setCatEd(prev => ({ ...prev, avatar: dataUrl })); return }
+                            ctx.drawImage(img, 0, 0, w, h)
+                            const out = canvas.toDataURL('image/jpeg', 0.8)
+                            setCatEd(prev => ({ ...prev, avatar: out.length > 100 ? out : dataUrl }))
+                          } catch { setCatEd(prev => ({ ...prev, avatar: dataUrl })) }
+                        }
+                        img.onerror = () => setCatEd(prev => ({ ...prev, avatar: dataUrl }))
+                        img.src = dataUrl
+                      } catch { setCatEd(prev => ({ ...prev, avatar: dataUrl })) }
                     }
+                    reader.onerror = () => setCatErr('อ่านไฟล์ไม่ได้')
                     reader.readAsDataURL(file)
-                    if (photoInputRef.current) photoInputRef.current.value = ''
                   }} />
                 <button type="button" onClick={() => photoInputRef.current?.click()}
                   style={{ cursor: 'pointer', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', fontSize: 13 }}>
@@ -433,7 +448,10 @@ export default function CatHealth() {
             <div><Lbl t="แพ้อะไร" /><Inp val={catEd.allergy||''} onChange={v => setCatEd({ ...catEd, allergy: v })} /></div>
           </div>
           <div><Lbl t="หมายเหตุ" /><textarea value={catEd.note||''} onChange={e => setCatEd({ ...catEd, note: e.target.value })} style={TA} rows={2} /></div>
-          <button onClick={saveCat} style={{ ...btnPrimary, opacity: catEd.name ? 1 : 0.5 }} disabled={!catEd.name}>บันทึก</button>
+          {catErr && <div style={{ color: '#ef4444', fontSize: 13, background: 'rgba(239,68,68,0.1)', padding: '8px 12px', borderRadius: 8 }}>{catErr}</div>}
+          <button onClick={saveCat} style={{ ...btnPrimary, opacity: (catEd.name && !catSaving) ? 1 : 0.5 }} disabled={!catEd.name || catSaving}>
+            {catSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+          </button>
         </div>
       </Modal>
 
