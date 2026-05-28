@@ -13,9 +13,10 @@ interface Vacc { id: string; catId: string; vaccineName: string; vacDate: string
 
 const EC: Partial<Cat> = { name: '', breed: '', color: '', birthDate: '', weight: '', microchip: '', allergy: '', note: '', avatar: '' }
 const avatarSrc = (avatar?: string) => {
-  if (!avatar) return '/cat-avatars/orange.svg'
-  if (avatar.startsWith('data:') || avatar.startsWith('/') || avatar.startsWith('http')) return avatar
-  return `/cat-avatars/${avatar}.svg`
+  const a = (avatar || '').trim()
+  if (!a) return '/cat-avatars/orange.svg'
+  if (a.startsWith('data:') || a.startsWith('/') || a.startsWith('http') || a.startsWith('blob:')) return a
+  return `/cat-avatars/${a}.svg`
 }
 const ED: Partial<DLog> = { logDate: new Date().toISOString().split('T')[0], weight: '', food: '', water: '', poop: '', mood: '', symptom: '', note: '', breathRate: '' }
 const EV: Partial<VVis> = { visitDate: new Date().toISOString().split('T')[0], clinic: '', doctor: '', reason: '', diagnosis: '', treatment: '', cost: '', nextDate: '', note: '' }
@@ -146,7 +147,7 @@ export default function CatHealth() {
       const img = new Image()
       img.onload = () => {
         URL.revokeObjectURL(blobUrl)
-        const MAX = 600
+        const MAX = 300
         const ratio = Math.min(MAX / img.width, MAX / img.height, 1)
         const w = Math.round(img.width * ratio)
         const h = Math.round(img.height * ratio)
@@ -155,7 +156,7 @@ export default function CatHealth() {
         const ctx = canvas.getContext('2d')
         if (!ctx) { reject(new Error('canvas error')); return }
         ctx.drawImage(img, 0, 0, w, h)
-        resolve(canvas.toDataURL('image/jpeg', 0.82))
+        resolve(canvas.toDataURL('image/jpeg', 0.72))
       }
       img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error('image load error')) }
       img.src = blobUrl
@@ -422,7 +423,8 @@ export default function CatHealth() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               {catEd.avatar ? (
                 <img src={avatarSrc(catEd.avatar)} width={72} height={72}
-                  style={{ borderRadius: 12, objectFit: 'cover' as const, border: '2px solid #334155', flexShrink: 0 }} alt="preview" />
+                  style={{ borderRadius: 12, objectFit: 'cover' as const, border: '2px solid #334155', flexShrink: 0 }} alt="preview"
+                  onError={e => { (e.target as HTMLImageElement).src = '/cat-avatars/orange.svg' }} />
               ) : (
                 <div style={{ width: 72, height: 72, borderRadius: 12, background: '#1e293b', border: '2px dashed #334155', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span style={{ fontSize: 28 }}>🐱</span>
