@@ -10,9 +10,9 @@ interface DLog { id: string; catId: string; logDate: string; weight: string; foo
 interface VVis { id: string; catId: string; visitDate: string; clinic: string; doctor: string; reason: string; diagnosis: string; treatment: string; cost: string; nextDate: string; note: string }
 interface Vacc { id: string; catId: string; vaccineName: string; vacDate: string; nextDate: string; clinic: string; note: string }
 
-const CAT_AVATARS = ['🐱','🐈','🐈‍⬛','😺','😸','😻','😽','🙀','😿','😾','🦁','🐯','🐆']
+import { CAT_COLORS } from '@/lib/cat-colors'
 
-const EC: Partial<Cat> = { name: '', breed: '', color: '', birthDate: '', weight: '', microchip: '', allergy: '', note: '', avatar: '🐱' }
+const EC: Partial<Cat> = { name: '', breed: '', color: '', birthDate: '', weight: '', microchip: '', allergy: '', note: '', avatar: 'orange' }
 const ED: Partial<DLog> = { logDate: new Date().toISOString().split('T')[0], weight: '', food: '', water: '', poop: '', mood: '', symptom: '', note: '', breathRate: '' }
 const EV: Partial<VVis> = { visitDate: new Date().toISOString().split('T')[0], clinic: '', doctor: '', reason: '', diagnosis: '', treatment: '', cost: '', nextDate: '', note: '' }
 const EVC: Partial<Vacc> = { vaccineName: '', vacDate: new Date().toISOString().split('T')[0], nextDate: '', clinic: '', note: '' }
@@ -194,7 +194,7 @@ export default function CatHealth() {
             {cats.map(c => (
               <div key={c.id} onClick={() => setCatId(c.id)}
                 style={{ flexShrink: 0, cursor: 'pointer', background: c.id === catId ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#1a1d2e', borderRadius: 16, padding: '16px 20px', border: c.id === catId ? '2px solid #6366f1' : '1px solid #2d3154', textAlign: 'center' as const, minWidth: 100, transition: 'all 0.2s' }}>
-                <div style={{ fontSize: 36, marginBottom: 6 }}>{c.avatar || '🐱'}</div>
+                <img src={'/cat-avatars/'+(c.avatar||'orange')+'.svg'} width={48} height={48} alt={c.name} style={{ borderRadius: 8 }} />
                 <div style={{ fontWeight: 700, color: 'white', fontSize: 14 }}>{c.name}</div>
                 {c.breed && <div style={{ color: c.id === catId ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: 11, marginTop: 2 }}>{c.breed}</div>}
               </div>
@@ -208,7 +208,7 @@ export default function CatHealth() {
 
           {cats.length === 0 ? (
             <div style={{ ...card, textAlign: 'center' as const, padding: 60 }}>
-              <div style={{ fontSize: 64, marginBottom: 16 }}>🐱</div>
+              <img src="/cat-avatars/orange.svg" width={80} height={80} alt="cat" style={{ marginBottom: 16 }} />
               <div style={{ color: '#94a3b8', fontSize: 16, marginBottom: 20 }}>ยังไม่มีข้อมูลแมว กดเพิ่มแมวเพื่อเริ่มต้น</div>
               <button onClick={() => { setCatEd(EC); setCatIsE(false); setCatMod(true) }} style={btnPrimary}>+ เพิ่มแมวตัวแรก</button>
             </div>
@@ -218,7 +218,7 @@ export default function CatHealth() {
               <div style={{ background: 'linear-gradient(135deg,#1a1d2e,#2d3154)', borderRadius: 20, padding: 28, marginBottom: 24, border: '1px solid #2d3154', position: 'relative' as const }}>
                 <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                   <div style={{ fontSize: 72, lineHeight: 1, background: 'rgba(99,102,241,0.15)', borderRadius: 20, padding: 16, border: '2px solid rgba(99,102,241,0.3)' }}>
-                    {selectedCat.avatar || '🐱'}
+                    <img src={'/cat-avatars/'+(selectedCat.avatar||'orange')+'.svg'} width={80} height={80} alt={selectedCat.name} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 28, fontWeight: 800, color: 'white', marginBottom: 4 }}>{selectedCat.name}</div>
@@ -374,10 +374,11 @@ export default function CatHealth() {
           <div>
             <Lbl t="เลือก Avatar" />
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 4 }}>
-              {CAT_AVATARS.map(a => (
-                <button key={a} onClick={() => setCatEd({ ...catEd, avatar: a })}
-                  style={{ fontSize: 28, padding: '6px', borderRadius: 10, border: catEd.avatar === a ? '2px solid #6366f1' : '2px solid transparent', background: catEd.avatar === a ? 'rgba(99,102,241,0.2)' : 'transparent', cursor: 'pointer' }}>
-                  {a}
+              {CAT_COLORS.map(cc => (
+                <button key={cc.id} onClick={() => setCatEd({ ...catEd, avatar: cc.id })}
+                  style={{ padding: '4px', borderRadius: 10, border: catEd.avatar === cc.id ? '2px solid #6366f1' : '2px solid transparent', background: catEd.avatar === cc.id ? 'rgba(99,102,241,0.2)' : 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center' }}>
+                  <img src={'/cat-avatars/'+cc.id+'.svg'} width={52} height={52} alt={cc.label} />
+                  <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2, maxWidth: 56, textAlign: 'center' as const }}>{cc.label.split(' ')[0]}</div>
                 </button>
               ))}
             </div>
