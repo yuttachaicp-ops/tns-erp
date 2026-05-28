@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Header from '@/components/layout/Header'
 import AppShell from '@/components/layout/AppShell'
 import Modal from '@/components/ui/Modal'
@@ -93,6 +93,7 @@ export default function CatHealth() {
   const [catId, setCatId] = useState<string>('')
   const [tab, setTab] = useState('profile')
   const [catMod, setCatMod] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
   const [catEd, setCatEd] = useState<Partial<Cat>>(EC)
   const [catIsE, setCatIsE] = useState(false)
   const [logs, setLogs] = useState<DLog[]>([])
@@ -381,32 +382,40 @@ export default function CatHealth() {
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                <label style={{ cursor: 'pointer', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', fontSize: 13, display: 'inline-block' }}>
-                  📷 เลือกรูปภาพ
-                  <input type="file" accept="image/*" style={{ display: 'none' }}
-                    onChange={e => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      const reader = new FileReader()
-                      reader.onload = ev => {
-                        const img = new Image()
-                        img.onload = () => {
-                          const MAX = 300
+                <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const reader = new FileReader()
+                    reader.onload = ev => {
+                      const dataUrl = ev.target?.result as string
+                      const img = new Image()
+                      img.onload = () => {
+                        try {
+                          const MAX = 400
                           const ratio = Math.min(MAX / img.width, MAX / img.height, 1)
                           const w = Math.round(img.width * ratio)
                           const h = Math.round(img.height * ratio)
                           const canvas = document.createElement('canvas')
                           canvas.width = w; canvas.height = h
-                          canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
-                          setCatEd(prev => ({ ...prev, avatar: canvas.toDataURL('image/jpeg', 0.8) }))
-                        }
-                        img.src = ev.target?.result as string
+                          const ctx = canvas.getContext('2d')
+                          if (!ctx) { setCatEd(prev => ({ ...prev, avatar: dataUrl })); return }
+                          ctx.drawImage(img, 0, 0, w, h)
+                          setCatEd(prev => ({ ...prev, avatar: canvas.toDataURL('image/jpeg', 0.82) }))
+                        } catch { setCatEd(prev => ({ ...prev, avatar: dataUrl })) }
                       }
-                      reader.readAsDataURL(file)
-                    }} />
-                </label>
+                      img.onerror = () => setCatEd(prev => ({ ...prev, avatar: dataUrl }))
+                      img.src = dataUrl
+                    }
+                    reader.readAsDataURL(file)
+                    if (photoInputRef.current) photoInputRef.current.value = ''
+                  }} />
+                <button type="button" onClick={() => photoInputRef.current?.click()}
+                  style={{ cursor: 'pointer', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', fontSize: 13 }}>
+                  📷 เลือกรูปภาพ
+                </button>
                 {catEd.avatar && (
-                  <button onClick={() => setCatEd(prev => ({ ...prev, avatar: '' }))}
+                  <button type="button" onClick={() => setCatEd(prev => ({ ...prev, avatar: '' }))}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 12, textAlign: 'left' as const, padding: 0 }}>
                     ✕ ลบรูป
                   </button>
