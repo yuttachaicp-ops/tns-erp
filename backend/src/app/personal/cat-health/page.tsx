@@ -206,7 +206,7 @@ export default function CatHealth() {
             {cats.map(c => (
               <div key={c.id} onClick={() => setCatId(c.id)}
                 style={{ flexShrink: 0, cursor: 'pointer', background: c.id === catId ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#1a1d2e', borderRadius: 16, padding: '16px 20px', border: c.id === catId ? '2px solid #6366f1' : '1px solid #2d3154', textAlign: 'center' as const, minWidth: 100, transition: 'all 0.2s' }}>
-                <img src={avatarSrc(c.avatar)} width={48} height={48} alt={c.name} style={{ borderRadius: 8, objectFit: 'cover' as const }} />
+                <img src={avatarSrc(c.avatar)} width={48} height={48} alt={c.name} style={{ borderRadius: 8, objectFit: 'cover' as const }} onError={e => { (e.target as HTMLImageElement).src = '/cat-avatars/orange.svg' }} />
                 <div style={{ fontWeight: 700, color: 'white', fontSize: 14 }}>{c.name}</div>
                 {c.breed && <div style={{ color: c.id === catId ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: 11, marginTop: 2 }}>{c.breed}</div>}
               </div>
@@ -224,7 +224,7 @@ export default function CatHealth() {
               <div style={{ background: 'linear-gradient(135deg,#1a1d2e,#2d3154)', borderRadius: 20, padding: 28, marginBottom: 24, border: '1px solid #2d3154', position: 'relative' as const }}>
                 <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                   <div style={{ fontSize: 72, lineHeight: 1, background: 'rgba(99,102,241,0.15)', borderRadius: 20, padding: 16, border: '2px solid rgba(99,102,241,0.3)' }}>
-                    <img src={avatarSrc(selectedCat.avatar)} width={80} height={80} alt={selectedCat.name} style={{ objectFit: 'cover' as const, borderRadius: 12 }} />
+                    <img src={avatarSrc(selectedCat.avatar)} width={80} height={80} alt={selectedCat.name} style={{ objectFit: 'cover' as const, borderRadius: 12 }} onError={e => { (e.target as HTMLImageElement).src = '/cat-avatars/orange.svg' }} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 28, fontWeight: 800, color: 'white', marginBottom: 4 }}>{selectedCat.name}</div>
@@ -398,29 +398,11 @@ export default function CatHealth() {
                     const reader = new FileReader()
                     reader.onload = ev => {
                       const dataUrl = ev.target?.result as string
-                      if (!dataUrl || !dataUrl.startsWith('data:')) { setCatErr('อ่านไฟล์ไม่ได้'); return }
-                      // resize ด้วย canvas ถ้าทำได้ ไม่งั้นใช้ตรงๆ
-                      try {
-                        const img = new Image()
-                        img.onload = () => {
-                          try {
-                            const MAX = 500
-                            const ratio = Math.min(MAX / img.width, MAX / img.height, 1)
-                            if (ratio >= 1) { setCatEd(prev => ({ ...prev, avatar: dataUrl })); return }
-                            const w = Math.round(img.width * ratio)
-                            const h = Math.round(img.height * ratio)
-                            const canvas = document.createElement('canvas')
-                            canvas.width = w; canvas.height = h
-                            const ctx = canvas.getContext('2d')
-                            if (!ctx) { setCatEd(prev => ({ ...prev, avatar: dataUrl })); return }
-                            ctx.drawImage(img, 0, 0, w, h)
-                            const out = canvas.toDataURL('image/jpeg', 0.8)
-                            setCatEd(prev => ({ ...prev, avatar: out.length > 100 ? out : dataUrl }))
-                          } catch { setCatEd(prev => ({ ...prev, avatar: dataUrl })) }
-                        }
-                        img.onerror = () => setCatEd(prev => ({ ...prev, avatar: dataUrl }))
-                        img.src = dataUrl
-                      } catch { setCatEd(prev => ({ ...prev, avatar: dataUrl })) }
+                      if (!dataUrl || !dataUrl.startsWith('data:image')) {
+                        setCatErr('อ่านไฟล์ไม่ได้ กรุณาเลือกไฟล์รูปภาพ')
+                        return
+                      }
+                      setCatEd(prev => ({ ...prev, avatar: dataUrl }))
                     }
                     reader.onerror = () => setCatErr('อ่านไฟล์ไม่ได้')
                     reader.readAsDataURL(file)
