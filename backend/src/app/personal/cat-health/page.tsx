@@ -6,12 +6,12 @@ import Modal from '@/components/ui/Modal'
 import { CSSProperties } from 'react'
 
 interface Prof { id: string; name: string; breed: string; color: string; birthDate: string; weight: string; microchip: string; allergy: string; note: string }
-interface DLog { id: string; logDate: string; weight: string; food: string; water: string; poop: string; mood: string; symptom: string; note: string }
+interface DLog { id: string; logDate: string; weight: string; food: string; water: string; poop: string; mood: string; symptom: string; note: string; breathRate: string }
 interface VVis { id: string; visitDate: string; clinic: string; doctor: string; reason: string; diagnosis: string; treatment: string; cost: string; nextDate: string; note: string }
 interface Vacc { id: string; vaccineName: string; vacDate: string; nextDate: string; clinic: string; note: string }
 
 const EP: Partial<Prof> = { name: '', breed: '', color: '', birthDate: '', weight: '', microchip: '', allergy: '', note: '' }
-const ED: Partial<DLog> = { logDate: new Date().toISOString().split('T')[0], weight: '', food: '', water: '', poop: '', mood: '', symptom: '', note: '' }
+const ED: Partial<DLog> = { logDate: new Date().toISOString().split('T')[0], weight: '', food: '', water: '', poop: '', mood: '', symptom: '', note: '', breathRate: '' }
 const EV: Partial<VVis> = { visitDate: new Date().toISOString().split('T')[0], clinic: '', doctor: '', reason: '', diagnosis: '', treatment: '', cost: '', nextDate: '', note: '' }
 const EVC: Partial<Vacc> = { vaccineName: '', vacDate: new Date().toISOString().split('T')[0], nextDate: '', clinic: '', note: '' }
 const IS: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }
@@ -29,6 +29,52 @@ function Lbl({ t }: { t: string }) {
 function Inp({ val, onChange, type = 'text', placeholder = '' }: { val: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
   return <input type={type} value={val} onChange={e => onChange(e.target.value)} placeholder={placeholder}
     style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #2d3154', boxSizing: 'border-box' as const, background: '#1a1d2e', color: 'white' }} />
+}
+
+function BreathTimer({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [running, setRunning] = useState(false)
+  const [secs, setSecs] = useState(60)
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    if (!running) return
+    if (secs === 0) { setRunning(false); onChange(String(count)); return }
+    const t = setTimeout(() => setSecs(s => s - 1), 1000)
+    return () => clearTimeout(t)
+  }, [running, secs, count, onChange])
+  function start() { setSecs(60); setCount(0); setRunning(true) }
+  function reset() { setRunning(false); setSecs(60); setCount(0); onChange('') }
+  const status = !value ? '' : Number(value) <= 40 ? 'ปกติ' : Number(value) <= 50 ? 'เฝ้าระวัง' : 'หอบเหนื่อย!'
+  const statusColor = !value ? '' : Number(value) <= 40 ? '#4ade80' : Number(value) <= 50 ? '#fbbf24' : '#f87171'
+  return (
+    <div>
+      {running && (
+        <div style={{ textAlign: 'center' as const, marginBottom: 12 }}>
+          <div style={{ fontSize: 48, fontWeight: 700, color: '#6366f1' }}>{secs}</div>
+          <div style={{ color: '#94a3b8', fontSize: 13 }}>วินาที</div>
+          <button onClick={() => setCount(c => c + 1)}
+            style={{ marginTop: 8, padding: '12px 32px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, fontSize: 18, cursor: 'pointer', fontWeight: 700 }}>
+            +1 ครั้ง ({count})
+          </button>
+        </div>
+      )}
+      {!running && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
+          <button onClick={start} style={{ padding: '8px 20px', background: '#6366f1', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+            จับเวลา 1 นาที
+          </button>
+          <Inp val={value} onChange={onChange} placeholder="หรือพิมพ์ตรงนี้" />
+          {value && <button onClick={reset} style={{ padding: '8px 12px', background: '#2d3154', color: '#94a3b8', border: 'none', borderRadius: 8, cursor: 'pointer' }}>รีเซ็ต</button>}
+        </div>
+      )}
+      {value && !running && (
+        <div style={{ marginTop: 8, fontWeight: 700, color: statusColor, fontSize: 15 }}>
+          {value} ครั้ง/นาที — {status}
+          {Number(value) > 50 && ' ควรพบสัตวแพทย์'}
+        </div>
+      )}
+      <div style={{ marginTop: 6, fontSize: 12, color: '#64748b' }}>ปกติ: 20-40 ครั้ง | เฝ้าระวัง: 41-50 | หอบเหนื่อย: 50+</div>
+    </div>
+  )
 }
 
 function tok(): string { return typeof window === 'undefined' ? '' : localStorage.getItem('tns-token') || '' }
@@ -283,7 +329,11 @@ export default function CatHealth() {
             <div><Lbl t="อารมณ์" /><Inp val={dEd.mood || ''} onChange={v => setDEd({ ...dEd, mood: v })} /></div>
             <div><Lbl t="อาการ" /><Inp val={dEd.symptom || ''} onChange={v => setDEd({ ...dEd, symptom: v })} /></div>
           </div>
-          <div><Lbl t="หมายเหตุ" /><textarea value={dEd.note || ''} onChange={e => setDEd({ ...dEd, note: e.target.value })} style={TA} rows={3} /></div>
+          <div style={{ background: '#0f1117', borderRadius: 8, padding: 16, border: '1px solid #2d3154' }}>
+  <Lbl t="อัตราการหายใจ (ครั้ง/นาที)" />
+  <BreathTimer value={dEd.breathRate || ''} onChange={v => setDEd({ ...dEd, breathRate: v })} />
+</div>
+<div><Lbl t="หมายเหตุ" /><textarea value={dEd.note || ''} onChange={e => setDEd({ ...dEd, note: e.target.value })} style={TA} rows={3} /></div>
           <button onClick={saveLog} style={btnPrimary}>บันทึก</button>
         </div>
       </Modal>
