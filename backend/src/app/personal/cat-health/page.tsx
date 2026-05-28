@@ -206,13 +206,7 @@ export default function CatHealth() {
             </div>
           </div>
 
-          {cats.length === 0 ? (
-            <div style={{ ...card, textAlign: 'center' as const, padding: 60 }}>
-              <img src="/cat-avatars/orange.svg" width={80} height={80} alt="cat" style={{ marginBottom: 16 }} />
-              <div style={{ color: '#94a3b8', fontSize: 16, marginBottom: 20 }}>ยังไม่มีข้อมูลแมว กดเพิ่มแมวเพื่อเริ่มต้น</div>
-              <button onClick={() => { setCatEd(EC); setCatIsE(false); setCatMod(true) }} style={btnPrimary}>+ เพิ่มแมวตัวแรก</button>
-            </div>
-          ) : selectedCat ? (
+          {selectedCat ? (
             <>
               {/* Cat Profile Header */}
               <div style={{ background: 'linear-gradient(135deg,#1a1d2e,#2d3154)', borderRadius: 20, padding: 28, marginBottom: 24, border: '1px solid #2d3154', position: 'relative' as const }}>
