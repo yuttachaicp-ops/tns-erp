@@ -10,9 +10,13 @@ interface DLog { id: string; catId: string; logDate: string; weight: string; foo
 interface VVis { id: string; catId: string; visitDate: string; clinic: string; doctor: string; reason: string; diagnosis: string; treatment: string; cost: string; nextDate: string; note: string }
 interface Vacc { id: string; catId: string; vaccineName: string; vacDate: string; nextDate: string; clinic: string; note: string }
 
-import { CAT_COLORS } from '@/lib/cat-colors'
 
-const EC: Partial<Cat> = { name: '', breed: '', color: '', birthDate: '', weight: '', microchip: '', allergy: '', note: '', avatar: 'orange' }
+const EC: Partial<Cat> = { name: '', breed: '', color: '', birthDate: '', weight: '', microchip: '', allergy: '', note: '', avatar: '' }
+const avatarSrc = (avatar?: string) => {
+  if (!avatar) return '/cat-avatars/orange.svg'
+  if (avatar.startsWith('data:') || avatar.startsWith('/') || avatar.startsWith('http')) return avatar
+  return `/cat-avatars/${avatar}.svg`
+}
 const ED: Partial<DLog> = { logDate: new Date().toISOString().split('T')[0], weight: '', food: '', water: '', poop: '', mood: '', symptom: '', note: '', breathRate: '' }
 const EV: Partial<VVis> = { visitDate: new Date().toISOString().split('T')[0], clinic: '', doctor: '', reason: '', diagnosis: '', treatment: '', cost: '', nextDate: '', note: '' }
 const EVC: Partial<Vacc> = { vaccineName: '', vacDate: new Date().toISOString().split('T')[0], nextDate: '', clinic: '', note: '' }
@@ -194,7 +198,7 @@ export default function CatHealth() {
             {cats.map(c => (
               <div key={c.id} onClick={() => setCatId(c.id)}
                 style={{ flexShrink: 0, cursor: 'pointer', background: c.id === catId ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#1a1d2e', borderRadius: 16, padding: '16px 20px', border: c.id === catId ? '2px solid #6366f1' : '1px solid #2d3154', textAlign: 'center' as const, minWidth: 100, transition: 'all 0.2s' }}>
-                <img src={'/cat-avatars/'+(c.avatar||'orange')+'.svg'} width={48} height={48} alt={c.name} style={{ borderRadius: 8 }} />
+                <img src={avatarSrc(c.avatar)} width={48} height={48} alt={c.name} style={{ borderRadius: 8, objectFit: 'cover' as const }} />
                 <div style={{ fontWeight: 700, color: 'white', fontSize: 14 }}>{c.name}</div>
                 {c.breed && <div style={{ color: c.id === catId ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: 11, marginTop: 2 }}>{c.breed}</div>}
               </div>
@@ -212,7 +216,7 @@ export default function CatHealth() {
               <div style={{ background: 'linear-gradient(135deg,#1a1d2e,#2d3154)', borderRadius: 20, padding: 28, marginBottom: 24, border: '1px solid #2d3154', position: 'relative' as const }}>
                 <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                   <div style={{ fontSize: 72, lineHeight: 1, background: 'rgba(99,102,241,0.15)', borderRadius: 20, padding: 16, border: '2px solid rgba(99,102,241,0.3)' }}>
-                    <img src={'/cat-avatars/'+(selectedCat.avatar||'orange')+'.svg'} width={80} height={80} alt={selectedCat.name} />
+                    <img src={avatarSrc(selectedCat.avatar)} width={80} height={80} alt={selectedCat.name} style={{ objectFit: 'cover' as const, borderRadius: 12 }} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 28, fontWeight: 800, color: 'white', marginBottom: 4 }}>{selectedCat.name}</div>
@@ -366,15 +370,35 @@ export default function CatHealth() {
       <Modal open={catMod} onClose={() => { setCatMod(false); setCatEd(EC); setCatIsE(false) }} title={catIsE ? 'แก้ไขข้อมูลแมว' : 'เพิ่มแมวใหม่'}>
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
           <div>
-            <Lbl t="เลือก Avatar" />
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 4 }}>
-              {CAT_COLORS.map(cc => (
-                <button key={cc.id} onClick={() => setCatEd({ ...catEd, avatar: cc.id })}
-                  style={{ padding: '4px', borderRadius: 10, border: catEd.avatar === cc.id ? '2px solid #6366f1' : '2px solid transparent', background: catEd.avatar === cc.id ? 'rgba(99,102,241,0.2)' : 'transparent', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center' }}>
-                  <img src={'/cat-avatars/'+cc.id+'.svg'} width={52} height={52} alt={cc.label} />
-                  <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2, maxWidth: 56, textAlign: 'center' as const }}>{cc.label.split(' ')[0]}</div>
-                </button>
-              ))}
+            <Lbl t="รูปแมว" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              {catEd.avatar ? (
+                <img src={avatarSrc(catEd.avatar)} width={72} height={72}
+                  style={{ borderRadius: 12, objectFit: 'cover' as const, border: '2px solid #334155', flexShrink: 0 }} alt="preview" />
+              ) : (
+                <div style={{ width: 72, height: 72, borderRadius: 12, background: '#1e293b', border: '2px dashed #334155', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 28 }}>🐱</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                <label style={{ cursor: 'pointer', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', fontSize: 13, display: 'inline-block' }}>
+                  📷 เลือกรูปภาพ
+                  <input type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = ev => setCatEd(prev => ({ ...prev, avatar: ev.target?.result as string }))
+                      reader.readAsDataURL(file)
+                    }} />
+                </label>
+                {catEd.avatar && (
+                  <button onClick={() => setCatEd(prev => ({ ...prev, avatar: '' }))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 12, textAlign: 'left' as const, padding: 0 }}>
+                    ✕ ลบรูป
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div><Lbl t="ชื่อแมว *" /><Inp val={catEd.name||''} onChange={v => setCatEd({ ...catEd, name: v })} placeholder="ชื่อแมว" /></div>
