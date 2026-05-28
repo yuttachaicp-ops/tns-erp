@@ -17,6 +17,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       microchip: body.microchip || null,
       allergy: body.allergy || null,
       note: body.note || null,
+      avatar: body.avatar || null,
     },
   })
   return NextResponse.json({ ok: true })

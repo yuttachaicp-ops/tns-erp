@@ -388,7 +388,20 @@ export default function CatHealth() {
                       const file = e.target.files?.[0]
                       if (!file) return
                       const reader = new FileReader()
-                      reader.onload = ev => setCatEd(prev => ({ ...prev, avatar: ev.target?.result as string }))
+                      reader.onload = ev => {
+                        const img = new Image()
+                        img.onload = () => {
+                          const MAX = 300
+                          const ratio = Math.min(MAX / img.width, MAX / img.height, 1)
+                          const w = Math.round(img.width * ratio)
+                          const h = Math.round(img.height * ratio)
+                          const canvas = document.createElement('canvas')
+                          canvas.width = w; canvas.height = h
+                          canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+                          setCatEd(prev => ({ ...prev, avatar: canvas.toDataURL('image/jpeg', 0.8) }))
+                        }
+                        img.src = ev.target?.result as string
+                      }
                       reader.readAsDataURL(file)
                     }} />
                 </label>

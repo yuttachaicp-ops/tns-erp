@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       microchip: body.microchip || null,
       allergy: body.allergy || null,
       note: body.note || null,
+      avatar: body.avatar || null,
     },
   })
   return NextResponse.json(cat)
