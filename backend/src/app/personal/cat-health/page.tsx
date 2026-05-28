@@ -5,21 +5,23 @@ import AppShell from '@/components/layout/AppShell'
 import Modal from '@/components/ui/Modal'
 import { CSSProperties } from 'react'
 
-interface Cat { id: string; name: string; breed: string; color: string; birthDate: string; weight: string; microchip: string; allergy: string; note: string }
+interface Cat { id: string; name: string; breed: string; color: string; birthDate: string; weight: string; microchip: string; allergy: string; note: string; avatar: string }
 interface DLog { id: string; catId: string; logDate: string; weight: string; food: string; water: string; poop: string; mood: string; symptom: string; note: string; breathRate: string }
 interface VVis { id: string; catId: string; visitDate: string; clinic: string; doctor: string; reason: string; diagnosis: string; treatment: string; cost: string; nextDate: string; note: string }
 interface Vacc { id: string; catId: string; vaccineName: string; vacDate: string; nextDate: string; clinic: string; note: string }
 
-const EC: Partial<Cat> = { name: '', breed: '', color: '', birthDate: '', weight: '', microchip: '', allergy: '', note: '' }
+const CAT_AVATARS = ['🐱','🐈','🐈‍⬛','😺','😸','😻','😽','🙀','😿','😾','🦁','🐯','🐆']
+
+const EC: Partial<Cat> = { name: '', breed: '', color: '', birthDate: '', weight: '', microchip: '', allergy: '', note: '', avatar: '🐱' }
 const ED: Partial<DLog> = { logDate: new Date().toISOString().split('T')[0], weight: '', food: '', water: '', poop: '', mood: '', symptom: '', note: '', breathRate: '' }
 const EV: Partial<VVis> = { visitDate: new Date().toISOString().split('T')[0], clinic: '', doctor: '', reason: '', diagnosis: '', treatment: '', cost: '', nextDate: '', note: '' }
 const EVC: Partial<Vacc> = { vaccineName: '', vacDate: new Date().toISOString().split('T')[0], nextDate: '', clinic: '', note: '' }
 const IS: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }
 const TA: CSSProperties = { width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #2d3154', fontFamily: 'inherit', resize: 'vertical' as const, background: '#0f1117', color: 'white' }
 const TABS = [
-  { id: 'profile', label: 'ข้อมูลแมว' },
-  { id: 'daily', label: 'บันทึกรายวัน' },
-  { id: 'vet', label: 'บันทึกพบหมอ' },
+  { id: 'profile', label: 'ข้อมูล' },
+  { id: 'daily', label: 'รายวัน' },
+  { id: 'vet', label: 'พบหมอ' },
   { id: 'vacc', label: 'วัคซีน' },
 ]
 
@@ -35,6 +37,17 @@ function fmt(d: string): string {
   if (!d) return '-'
   return new Date(d).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
 }
+function calcAge(birthDate: string): string {
+  if (!birthDate) return ''
+  const birth = new Date(birthDate)
+  const now = new Date()
+  const years = now.getFullYear() - birth.getFullYear()
+  const months = now.getMonth() - birth.getMonth()
+  const totalMonths = years * 12 + months
+  if (totalMonths < 12) return `${totalMonths} เดือน`
+  return `${years} ปี ${months < 0 ? months + 12 : months} เดือน`
+}
+
 function BreathTimer({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [running, setRunning] = useState(false)
   const [secs, setSecs] = useState(60)
@@ -162,52 +175,92 @@ export default function CatHealth() {
 
   function tabSt(id: string): CSSProperties {
     const a = tab === id
-    return { padding: '10px 18px', cursor: 'pointer', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderBottom: a ? '3px solid #6366f1' : '3px solid transparent', fontWeight: a ? 700 : 400, color: a ? '#818cf8' : '#64748b', background: 'none', fontSize: 14, whiteSpace: 'nowrap' as const }
+    return { padding: '10px 20px', cursor: 'pointer', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderBottom: a ? '3px solid #6366f1' : '3px solid transparent', fontWeight: a ? 700 : 400, color: a ? '#818cf8' : '#64748b', background: 'none', fontSize: 14, whiteSpace: 'nowrap' as const }
   }
 
-  const card: CSSProperties = { background: '#1a1d2e', borderRadius: 12, padding: 20, border: '1px solid #2d3154' }
+  const card: CSSProperties = { background: '#1a1d2e', borderRadius: 16, padding: 20, border: '1px solid #2d3154' }
   const btnPrimary: CSSProperties = { padding: '10px 20px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }
-  const btnEdit: CSSProperties = { padding: '4px 12px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: 'none', cursor: 'pointer' }
-  const btnDel: CSSProperties = { padding: '4px 12px', borderRadius: 6, background: 'rgba(239,68,68,0.15)', color: '#f87171', border: 'none', cursor: 'pointer' }
+  const btnEdit: CSSProperties = { padding: '6px 14px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', fontSize: 13 }
+  const btnDel: CSSProperties = { padding: '6px 14px', borderRadius: 6, background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)', cursor: 'pointer', fontSize: 13 }
 
   return (
     <AppShell>
       <Header title="Cat Health" />
       <div style={{ padding: '24px', flex: 1 }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' as const }}>
-            <select value={catId} onChange={e => setCatId(e.target.value)}
-              style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #2d3154', background: '#1a1d2e', color: 'white', fontSize: 15, fontWeight: 600, minWidth: 160 }}>
-              {cats.length === 0 && <option value="">ยังไม่มีแมว</option>}
-              {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <button onClick={() => { setCatEd(EC); setCatIsE(false); setCatMod(true) }} style={btnPrimary}>+ เพิ่มแมว</button>
-            {selectedCat && <>
-              <button onClick={() => { setCatEd(selectedCat); setCatIsE(true); setCatMod(true) }} style={btnEdit}>แก้ไขข้อมูล</button>
-              <button onClick={() => delCat(catId)} style={btnDel}>ลบแมวตัวนี้</button>
-            </>}
+
+          {/* Cat Cards Row */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 24, overflowX: 'auto' as const, paddingBottom: 8 }}>
+            {cats.map(c => (
+              <div key={c.id} onClick={() => setCatId(c.id)}
+                style={{ flexShrink: 0, cursor: 'pointer', background: c.id === catId ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#1a1d2e', borderRadius: 16, padding: '16px 20px', border: c.id === catId ? '2px solid #6366f1' : '1px solid #2d3154', textAlign: 'center' as const, minWidth: 100, transition: 'all 0.2s' }}>
+                <div style={{ fontSize: 36, marginBottom: 6 }}>{c.avatar || '🐱'}</div>
+                <div style={{ fontWeight: 700, color: 'white', fontSize: 14 }}>{c.name}</div>
+                {c.breed && <div style={{ color: c.id === catId ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: 11, marginTop: 2 }}>{c.breed}</div>}
+              </div>
+            ))}
+            <div onClick={() => { setCatEd(EC); setCatIsE(false); setCatMod(true) }}
+              style={{ flexShrink: 0, cursor: 'pointer', background: 'transparent', borderRadius: 16, padding: '16px 20px', border: '2px dashed #2d3154', textAlign: 'center' as const, minWidth: 100, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <div style={{ fontSize: 28, color: '#64748b' }}>+</div>
+              <div style={{ color: '#64748b', fontSize: 12 }}>เพิ่มแมว</div>
+            </div>
           </div>
+
           {cats.length === 0 ? (
             <div style={{ ...card, textAlign: 'center' as const, padding: 60 }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🐱</div>
+              <div style={{ fontSize: 64, marginBottom: 16 }}>🐱</div>
               <div style={{ color: '#94a3b8', fontSize: 16, marginBottom: 20 }}>ยังไม่มีข้อมูลแมว กดเพิ่มแมวเพื่อเริ่มต้น</div>
               <button onClick={() => { setCatEd(EC); setCatIsE(false); setCatMod(true) }} style={btnPrimary}>+ เพิ่มแมวตัวแรก</button>
             </div>
-          ) : (
+          ) : selectedCat ? (
             <>
+              {/* Cat Profile Header */}
+              <div style={{ background: 'linear-gradient(135deg,#1a1d2e,#2d3154)', borderRadius: 20, padding: 28, marginBottom: 24, border: '1px solid #2d3154', position: 'relative' as const }}>
+                <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                  <div style={{ fontSize: 72, lineHeight: 1, background: 'rgba(99,102,241,0.15)', borderRadius: 20, padding: 16, border: '2px solid rgba(99,102,241,0.3)' }}>
+                    {selectedCat.avatar || '🐱'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: 'white', marginBottom: 4 }}>{selectedCat.name}</div>
+                    <div style={{ color: '#818cf8', fontSize: 15, marginBottom: 8 }}>{selectedCat.breed || 'ไม่ระบุสายพันธุ์'}{selectedCat.color ? ` • ${selectedCat.color}` : ''}</div>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' as const }}>
+                      {selectedCat.birthDate && <span style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', padding: '4px 12px', borderRadius: 20, fontSize: 13 }}>🎂 {calcAge(selectedCat.birthDate)}</span>}
+                      {selectedCat.weight && <span style={{ background: 'rgba(34,197,94,0.15)', color: '#4ade80', padding: '4px 12px', borderRadius: 20, fontSize: 13 }}>⚖️ {selectedCat.weight} kg</span>}
+                      {selectedCat.microchip && <span style={{ background: 'rgba(251,191,36,0.15)', color: '#fbbf24', padding: '4px 12px', borderRadius: 20, fontSize: 13 }}>📡 {selectedCat.microchip}</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                    <button onClick={() => { setCatEd(selectedCat); setCatIsE(true); setCatMod(true) }} style={btnEdit}>✏️ แก้ไข</button>
+                    <button onClick={() => delCat(catId)} style={btnDel}>🗑️ ลบ</button>
+                  </div>
+                </div>
+                {selectedCat.allergy && (
+                  <div style={{ marginTop: 16, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '8px 14px', color: '#fca5a5', fontSize: 13 }}>
+                    ⚠️ แพ้: {selectedCat.allergy}
+                  </div>
+                )}
+              </div>
+
+              {/* Tabs */}
               <div style={{ display: 'flex', borderBottom: '1px solid #2d3154', marginBottom: 24, overflowX: 'auto' as const }}>
                 {TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} style={tabSt(t.id)}>{t.label}</button>)}
               </div>
-              {tab === 'profile' && selectedCat && (
+
+              {tab === 'profile' && (
                 <div style={card}>
-                  <h2 style={{ fontSize: 18, fontWeight: 700, color: 'white', marginBottom: 20 }}>ข้อมูล {selectedCat.name}</h2>
+                  <h3 style={{ color: 'white', fontWeight: 700, marginBottom: 16, fontSize: 16 }}>ข้อมูลทั้งหมด</h3>
                   <div style={IS}>
-                    {([['\u0e0a\u0e37\u0e48\u0e2d', selectedCat.name], ['\u0e2a\u0e32\u0e22\u0e1e\u0e31\u0e19\u0e18\u0e38\u0e4c', selectedCat.breed||'-'], ['\u0e2a\u0e35', selectedCat.color||'-'], ['\u0e27\u0e31\u0e19\u0e40\u0e01\u0e34\u0e14', fmt(selectedCat.birthDate||'')], ['\u0e19\u0e49\u0e33\u0e2b\u0e19\u0e31\u0e01 (kg)', selectedCat.weight||'-'], ['\u0e44\u0e21\u0e42\u0e04\u0e23\u0e0a\u0e34\u0e1b', selectedCat.microchip||'-'], ['\u0e41\u0e1e\u0e49\u0e2d\u0e30\u0e44\u0e23', selectedCat.allergy||'-'], ['\u0e2b\u0e21\u0e32\u0e22\u0e40\u0e2b\u0e15\u0e38', selectedCat.note||'-']] as [string,string][]).map(([k,v]) => (
-                      <div key={k}><div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>{k}</div><div style={{ fontWeight: 500, color: 'white' }}>{v}</div></div>
+                    {([['ชื่อ', selectedCat.name], ['สายพันธุ์', selectedCat.breed||'-'], ['สี', selectedCat.color||'-'], ['วันเกิด', fmt(selectedCat.birthDate||'')], ['อายุ', calcAge(selectedCat.birthDate||'')||'-'], ['น้ำหนัก (kg)', selectedCat.weight||'-'], ['ไมโครชิป', selectedCat.microchip||'-'], ['แพ้อะไร', selectedCat.allergy||'-']] as [string,string][]).map(([k,v]) => (
+                      <div key={k} style={{ background: '#0f1117', borderRadius: 10, padding: '10px 14px' }}>
+                        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: 1 }}>{k}</div>
+                        <div style={{ fontWeight: 600, color: 'white', fontSize: 14 }}>{v}</div>
+                      </div>
                     ))}
                   </div>
+                  {selectedCat.note && <div style={{ marginTop: 16, background: '#0f1117', borderRadius: 10, padding: '10px 14px', color: '#94a3b8', fontSize: 13 }}>📝 {selectedCat.note}</div>}
                 </div>
               )}
+
               {tab === 'daily' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -217,30 +270,37 @@ export default function CatHealth() {
                   {logs.length === 0 ? <p style={{ color: '#64748b', textAlign: 'center' as const, padding: 40 }}>ยังไม่มีบันทึกในเดือนนี้</p> : (
                     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
                       {logs.map(l => (
-                        <div key={l.id} style={card}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div style={{ fontWeight: 700, fontSize: 16, color: 'white' }}>{fmt(l.logDate)}</div>
+                        <div key={l.id} style={{ ...card, borderLeft: '4px solid #6366f1' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                            <div style={{ fontWeight: 700, fontSize: 16, color: 'white' }}>📅 {fmt(l.logDate)}</div>
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button onClick={() => { setDEd(l); setDIsE(true); setDMod(true) }} style={btnEdit}>แก้ไข</button>
                               <button onClick={() => delLog(l.id)} style={btnDel}>ลบ</button>
                             </div>
                           </div>
-                          <div style={{ ...IS, marginTop: 12 }}>
-                            <div><span style={{ color: '#64748b', fontSize: 12 }}>น้ำหนัก: </span><span style={{ color: 'white' }}>{l.weight||'-'} kg</span></div>
-                            <div><span style={{ color: '#64748b', fontSize: 12 }}>อาหาร: </span><span style={{ color: 'white' }}>{l.food||'-'}</span></div>
-                            <div><span style={{ color: '#64748b', fontSize: 12 }}>น้ำ: </span><span style={{ color: 'white' }}>{l.water||'-'}</span></div>
-                            <div><span style={{ color: '#64748b', fontSize: 12 }}>อุจจาระ: </span><span style={{ color: 'white' }}>{l.poop||'-'}</span></div>
-                            <div><span style={{ color: '#64748b', fontSize: 12 }}>อารมณ์: </span><span style={{ color: 'white' }}>{l.mood||'-'}</span></div>
-                            <div><span style={{ color: '#64748b', fontSize: 12 }}>อาการ: </span><span style={{ color: 'white' }}>{l.symptom||'-'}</span></div>
-                            {l.breathRate && <div><span style={{ color: '#64748b', fontSize: 12 }}>หายใจ: </span><span style={{ color: Number(l.breathRate)>50?'#f87171':Number(l.breathRate)>40?'#fbbf24':'#4ade80' }}>{l.breathRate} ครั้ง/นาที</span></div>}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                            {[['⚖️', 'น้ำหนัก', l.weight ? l.weight+' kg' : '-'], ['🍽️', 'อาหาร', l.food||'-'], ['💧', 'น้ำ', l.water||'-'], ['💩', 'อุจจาระ', l.poop||'-'], ['😸', 'อารมณ์', l.mood||'-'], ['🌡️', 'อาการ', l.symptom||'-']].map(([icon,label,val]) => (
+                              <div key={label} style={{ background: '#0f1117', borderRadius: 8, padding: '8px 10px' }}>
+                                <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>{icon} {label}</div>
+                                <div style={{ color: 'white', fontSize: 13, fontWeight: 500 }}>{val}</div>
+                              </div>
+                            ))}
                           </div>
-                          {l.note && <div style={{ marginTop: 8, color: '#94a3b8', fontSize: 13 }}>{l.note}</div>}
+                          {l.breathRate && (
+                            <div style={{ marginTop: 10, background: '#0f1117', borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ fontSize: 16 }}>🫁</span>
+                              <span style={{ color: '#64748b', fontSize: 12 }}>หายใจ:</span>
+                              <span style={{ fontWeight: 700, color: Number(l.breathRate)>50?'#f87171':Number(l.breathRate)>40?'#fbbf24':'#4ade80' }}>{l.breathRate} ครั้ง/นาที</span>
+                            </div>
+                          )}
+                          {l.note && <div style={{ marginTop: 8, color: '#94a3b8', fontSize: 13, borderTop: '1px solid #2d3154', paddingTop: 8 }}>📝 {l.note}</div>}
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
               )}
+
               {tab === 'vet' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
@@ -249,24 +309,24 @@ export default function CatHealth() {
                   {vets.length === 0 ? <p style={{ color: '#64748b', textAlign: 'center' as const, padding: 40 }}>ยังไม่มีบันทึกการพบหมอ</p> : (
                     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
                       {vets.map(v => (
-                        <div key={v.id} style={card}>
+                        <div key={v.id} style={{ ...card, borderLeft: '4px solid #22d3ee' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                              <div style={{ fontWeight: 700, fontSize: 16, color: 'white' }}>{fmt(v.visitDate)}</div>
-                              <div style={{ color: '#818cf8', fontWeight: 600 }}>{v.clinic}{v.doctor ? ` — ${v.doctor}` : ''}</div>
+                              <div style={{ fontWeight: 700, fontSize: 16, color: 'white' }}>🏥 {fmt(v.visitDate)}</div>
+                              <div style={{ color: '#22d3ee', fontWeight: 600, marginTop: 2 }}>{v.clinic}{v.doctor ? ` — ${v.doctor}` : ''}</div>
                             </div>
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button onClick={() => { setVEd(v); setVIsE(true); setVMod(true) }} style={btnEdit}>แก้ไข</button>
                               <button onClick={() => delVet(v.id)} style={btnDel}>ลบ</button>
                             </div>
                           </div>
-                          <div style={{ marginTop: 12 }}>
-                            {v.reason && <div><span style={{ color: '#64748b', fontSize: 12 }}>เหตุผล: </span><span style={{ color: 'white' }}>{v.reason}</span></div>}
-                            {v.diagnosis && <div><span style={{ color: '#64748b', fontSize: 12 }}>การวินิจฉัย: </span><span style={{ color: 'white' }}>{v.diagnosis}</span></div>}
-                            {v.treatment && <div><span style={{ color: '#64748b', fontSize: 12 }}>การรักษา: </span><span style={{ color: 'white' }}>{v.treatment}</span></div>}
-                            {v.cost && <div><span style={{ color: '#64748b', fontSize: 12 }}>ค่าใช้จ่าย: </span><span style={{ color: 'white' }}>฿{v.cost}</span></div>}
-                            {v.nextDate && <div style={{ marginTop: 4, color: '#4ade80', fontWeight: 600 }}>นัดครั้งต่อไป: {fmt(v.nextDate)}</div>}
-                            {v.note && <div style={{ marginTop: 4, color: '#94a3b8', fontSize: 13 }}>{v.note}</div>}
+                          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                            {v.reason && <div style={{ background: '#0f1117', borderRadius: 8, padding: '6px 12px' }}><span style={{ color: '#64748b', fontSize: 12 }}>เหตุผล: </span><span style={{ color: 'white' }}>{v.reason}</span></div>}
+                            {v.diagnosis && <div style={{ background: '#0f1117', borderRadius: 8, padding: '6px 12px' }}><span style={{ color: '#64748b', fontSize: 12 }}>วินิจฉัย: </span><span style={{ color: 'white' }}>{v.diagnosis}</span></div>}
+                            {v.treatment && <div style={{ background: '#0f1117', borderRadius: 8, padding: '6px 12px' }}><span style={{ color: '#64748b', fontSize: 12 }}>การรักษา: </span><span style={{ color: 'white' }}>{v.treatment}</span></div>}
+                            {v.cost && <div style={{ background: '#0f1117', borderRadius: 8, padding: '6px 12px' }}><span style={{ color: '#64748b', fontSize: 12 }}>ค่าใช้จ่าย: </span><span style={{ color: '#4ade80', fontWeight: 600 }}>฿{v.cost}</span></div>}
+                            {v.nextDate && <div style={{ background: 'rgba(34,197,94,0.1)', borderRadius: 8, padding: '6px 12px', color: '#4ade80', fontWeight: 600 }}>📅 นัดครั้งต่อไป: {fmt(v.nextDate)}</div>}
+                            {v.note && <div style={{ color: '#94a3b8', fontSize: 13 }}>📝 {v.note}</div>}
                           </div>
                         </div>
                       ))}
@@ -274,32 +334,28 @@ export default function CatHealth() {
                   )}
                 </div>
               )}
+
               {tab === 'vacc' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
                     <button onClick={() => { setVcEd(EVC); setVcIsE(false); setVcMod(true) }} style={btnPrimary}>+ เพิ่มวัคซีน</button>
                   </div>
                   {vaccs.length === 0 ? <p style={{ color: '#64748b', textAlign: 'center' as const, padding: 40 }}>ยังไม่มีบันทึกวัคซีน</p> : (
-                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 }}>
                       {vaccs.map(v => {
                         const overdue = !!(v.nextDate && new Date(v.nextDate) < new Date())
                         return (
-                          <div key={v.id} style={{ ...card, border: overdue ? '2px solid #ef4444' : '1px solid #2d3154' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <div style={{ fontWeight: 700, fontSize: 16, color: 'white', marginBottom: 4 }}>{v.vaccineName}</div>
-                                {overdue && <span style={{ background: '#ef4444', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>เกินนัด!</span>}
-                              </div>
-                              <div style={{ display: 'flex', gap: 8 }}>
-                                <button onClick={() => { setVcEd(v); setVcIsE(true); setVcMod(true) }} style={btnEdit}>แก้ไข</button>
-                                <button onClick={() => delVacc(v.id)} style={btnDel}>ลบ</button>
-                              </div>
+                          <div key={v.id} style={{ ...card, borderTop: `4px solid ${overdue ? '#ef4444' : '#22d3ee'}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                              <div style={{ fontWeight: 700, fontSize: 15, color: 'white' }}>💉 {v.vaccineName}</div>
+                              {overdue && <span style={{ background: '#ef4444', color: '#fff', fontSize: 10, padding: '2px 8px', borderRadius: 10, fontWeight: 600, whiteSpace: 'nowrap' as const }}>เกินนัด!</span>}
                             </div>
-                            <div style={{ marginTop: 12 }}>
-                              <div><span style={{ color: '#64748b', fontSize: 12 }}>วันที่ฉีด: </span><span style={{ color: 'white' }}>{fmt(v.vacDate)}</span></div>
-                              {v.nextDate && <div style={{ color: overdue?'#f87171':'#4ade80', fontWeight: 600, marginTop: 4 }}>นัดครั้งต่อไป: {fmt(v.nextDate)}</div>}
-                              {v.clinic && <div style={{ marginTop: 4 }}><span style={{ color: '#64748b', fontSize: 12 }}>คลินิก/หมอ: </span><span style={{ color: 'white' }}>{v.clinic}</span></div>}
-                              {v.note && <div style={{ marginTop: 4, color: '#94a3b8', fontSize: 13 }}>{v.note}</div>}
+                            <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 4 }}>ฉีดวันที่: {fmt(v.vacDate)}</div>
+                            {v.nextDate && <div style={{ fontSize: 13, color: overdue ? '#f87171' : '#4ade80', fontWeight: 600 }}>นัดครั้งต่อไป: {fmt(v.nextDate)}</div>}
+                            {v.clinic && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>📍 {v.clinic}</div>}
+                            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                              <button onClick={() => { setVcEd(v); setVcIsE(true); setVcMod(true) }} style={{ ...btnEdit, flex: 1, textAlign: 'center' as const }}>แก้ไข</button>
+                              <button onClick={() => delVacc(v.id)} style={{ ...btnDel, flex: 1, textAlign: 'center' as const }}>ลบ</button>
                             </div>
                           </div>
                         )
@@ -309,11 +365,23 @@ export default function CatHealth() {
                 </div>
               )}
             </>
-          )}
+          ) : null}
         </div>
       </div>
+
       <Modal open={catMod} onClose={() => { setCatMod(false); setCatEd(EC); setCatIsE(false) }} title={catIsE ? 'แก้ไขข้อมูลแมว' : 'เพิ่มแมวใหม่'}>
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+          <div>
+            <Lbl t="เลือก Avatar" />
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 4 }}>
+              {CAT_AVATARS.map(a => (
+                <button key={a} onClick={() => setCatEd({ ...catEd, avatar: a })}
+                  style={{ fontSize: 28, padding: '6px', borderRadius: 10, border: catEd.avatar === a ? '2px solid #6366f1' : '2px solid transparent', background: catEd.avatar === a ? 'rgba(99,102,241,0.2)' : 'transparent', cursor: 'pointer' }}>
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
           <div><Lbl t="ชื่อแมว *" /><Inp val={catEd.name||''} onChange={v => setCatEd({ ...catEd, name: v })} placeholder="ชื่อแมว" /></div>
           <div style={IS}>
             <div><Lbl t="สายพันธุ์" /><Inp val={catEd.breed||''} onChange={v => setCatEd({ ...catEd, breed: v })} /></div>
@@ -323,10 +391,11 @@ export default function CatHealth() {
             <div><Lbl t="ไมโครชิป" /><Inp val={catEd.microchip||''} onChange={v => setCatEd({ ...catEd, microchip: v })} /></div>
             <div><Lbl t="แพ้อะไร" /><Inp val={catEd.allergy||''} onChange={v => setCatEd({ ...catEd, allergy: v })} /></div>
           </div>
-          <div><Lbl t="หมายเหตุ" /><textarea value={catEd.note||''} onChange={e => setCatEd({ ...catEd, note: e.target.value })} style={TA} rows={3} /></div>
+          <div><Lbl t="หมายเหตุ" /><textarea value={catEd.note||''} onChange={e => setCatEd({ ...catEd, note: e.target.value })} style={TA} rows={2} /></div>
           <button onClick={saveCat} style={{ ...btnPrimary, opacity: catEd.name ? 1 : 0.5 }} disabled={!catEd.name}>บันทึก</button>
         </div>
       </Modal>
+
       <Modal open={dMod} onClose={() => { setDMod(false); setDEd(ED); setDIsE(false) }} title={dIsE ? 'แก้ไขบันทึกรายวัน' : 'เพิ่มบันทึกรายวัน'}>
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
           <div><Lbl t="วันที่" /><Inp val={dEd.logDate||''} onChange={v => setDEd({ ...dEd, logDate: v })} type="date" /></div>
@@ -346,6 +415,7 @@ export default function CatHealth() {
           <button onClick={saveLog} style={btnPrimary}>บันทึก</button>
         </div>
       </Modal>
+
       <Modal open={vMod} onClose={() => { setVMod(false); setVEd(EV); setVIsE(false) }} title={vIsE ? 'แก้ไขบันทึกพบหมอ' : 'เพิ่มบันทึกพบหมอ'}>
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
           <div style={IS}>
@@ -362,6 +432,7 @@ export default function CatHealth() {
           <button onClick={saveVet} style={btnPrimary}>บันทึก</button>
         </div>
       </Modal>
+
       <Modal open={vcMod} onClose={() => { setVcMod(false); setVcEd(EVC); setVcIsE(false) }} title={vcIsE ? 'แก้ไขข้อมูลวัคซีน' : 'เพิ่มข้อมูลวัคซีน'}>
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
           <div><Lbl t="ชื่อวัคซีน" /><Inp val={vcEd.vaccineName||''} onChange={v => setVcEd({ ...vcEd, vaccineName: v })} placeholder="Tricat, Rabies, FeLV..." /></div>
