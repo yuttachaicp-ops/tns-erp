@@ -107,7 +107,7 @@ export default function CatHealth() {
 
   const fetchCats = useCallback(async () => {
     const r = await fetch('/api/cat-health/cats', { headers: { Authorization: `Bearer ${tok()}` } })
-    if (r.ok) { const data = await r.json(); setCats(data); if (data.length > 0 && !catId) setCatId(data[0].id) }
+    if (r.ok) { const data = await r.json(); setCats(data);  }
   }, [catId])
   const fetchLogs = useCallback(async () => {
     if (!catId) return
