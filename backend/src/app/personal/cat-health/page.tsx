@@ -1,272 +1,320 @@
 'use client'
-import{useEffect,useState,useCallback,CSSProperties}from 'react'
-import AppShell from '@/components/layout/AppShell'
+import { useState, useEffect, useCallback } from 'react'
 import Header from '@/components/layout/Header'
 import Modal from '@/components/ui/Modal'
+import { CSSProperties } from 'react'
 
-const FOOD=['กินเอง','ป้อน','ไม่กิน']
-const WATER=['ดื่มมาก','ดื่มน้อย','ไม่ดื่ม']
-const BEHAV=['ปกติ','ซึม','เล่น','ร้องมาก','ซ่อนตัว','ก้าวร้าว']
-const TABS=[{id:'profile',label:'🐱 ข้อมูลแมว'},{id:'daily',label:'📋 บันทึกรายวัน'},{id:'vet',label:'🏥 บันทึกพบหมอ'}]
+interface Prof { id: string; name: string; breed: string; color: string; birthDate: string; weight: string; microchip: string; allergy: string; note: string }
+interface DLog { id: string; logDate: string; weight: string; food: string; water: string; poop: string; mood: string; symptom: string; note: string }
+interface VVis { id: string; visitDate: string; clinic: string; doctor: string; reason: string; diagnosis: string; treatment: string; cost: string; nextDate: string; note: string }
+interface Vacc { id: string; vaccineName: string; vacDate: string; nextDate: string; clinic: string; note: string }
 
-interface Prof{name:string;age:string;gender:string;breed:string;weight:string;diagnosis:string;clinic:string;doctor:string}
-interface DLog{id:string;logDate:string;medicine:string;foodIntake:string;waterIntake:string;excretion:string;behavior:string;temperature:string;weight:string;symptoms:string;note:string}
-interface VVis{id:string;visitDate:string;results:string;bloodValues:string;additionalDiag:string;medicationChange:string;cost:string;note:string}
+const EP: Partial<Prof> = { name: '', breed: '', color: '', birthDate: '', weight: '', microchip: '', allergy: '', note: '' }
+const ED: Partial<DLog> = { logDate: new Date().toISOString().split('T')[0], weight: '', food: '', water: '', poop: '', mood: '', symptom: '', note: '' }
+const EV: Partial<VVis> = { visitDate: new Date().toISOString().split('T')[0], clinic: '', doctor: '', reason: '', diagnosis: '', treatment: '', cost: '', nextDate: '', note: '' }
+const EVC: Partial<Vacc> = { vaccineName: '', vacDate: new Date().toISOString().split('T')[0], nextDate: '', clinic: '', note: '' }
+const IS: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }
+const TA: CSSProperties = { width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ddd', fontFamily: 'inherit', resize: 'vertical' as const }
+const TABS = [
+  { id: 'profile', label: '🐱 ข้อมูลแมว' },
+  { id: 'daily', label: '📋 บันทึกรายวัน' },
+  { id: 'vet', label: '🏥 บันทึกพบหมอ' },
+  { id: 'vacc', label: '💉 วัคซีน' },
+]
 
-const EP:Prof={name:'',age:'',gender:'',breed:'',weight:'',diagnosis:'',clinic:'',doctor:''}
-const ED:Partial<DLog>={logDate:new Date().toISOString().split('T')[0],medicine:'',foodIntake:'กินเอง',waterIntake:'ดื่มน้อย',excretion:'',behavior:'ปกติ',temperature:'',weight:'',symptoms:'',note:''}
-const EV:Partial<VVis>={visitDate:new Date().toISOString().split('T')[0],results:'',bloodValues:'',additionalDiag:'',medicationChange:'',cost:'',note:''}
-const IS:CSSProperties={width:'100%',padding:'10px 12px',borderRadius:'8px',background:'#0f1117',border:'1px solid #2d3154',color:'white',outline:'none'}
-const TA:CSSProperties={width:'100%',padding:'10px 12px',borderRadius:'8px',background:'#0f1117',border:'1px solid #2d3154',color:'white',outline:'none',resize:'vertical'}
-
-function tok(){return localStorage.getItem('tns-token')}
-function fmt(n:number){return n.toLocaleString('th-TH',{minimumFractionDigits:2})}
-function Lbl({t}:{t:string}){return<label style={{display:'block',fontSize:'13px',color:'#94a3b8',marginBottom:'6px'}}>{t}</label>}
-function Inp({v,fn,ph,tp}:{v:string;fn:(x:string)=>void;ph?:string;tp?:string}){
-  return<input type={tp||'text'} value={v} onChange={e=>fn(e.target.value)} placeholder={ph||''} style={IS}/>
+function Lbl({ t }: { t: string }) {
+  return <label style={{ fontWeight: 600, marginBottom: 4, display: 'block' }}>{t}</label>
 }
-function Sel({v,fn,opts}:{v:string;fn:(x:string)=>void;opts:string[]}){
-  return<select value={v} onChange={e=>fn(e.target.value)} style={IS}>{opts.map(o=><option key={o} value={o}>{o}</option>)}</select>
+function Inp({ val, onChange, type = 'text', placeholder = '' }: { val: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
+  return <input type={type} value={val} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #ddd', boxSizing: 'border-box' as const }} />
 }
 
-export default function CatHealthPage(){
-  const[tab,setTab]=useState('profile')
-  const[prof,setProf]=useState<Prof>(EP)
-  const[editP,setEditP]=useState(false)
-  const[logs,setLogs]=useState<DLog[]>([])
-  const[month,setMonth]=useState(()=>new Date().toISOString().slice(0,7))
-  const[dMod,setDMod]=useState(false)
-  const[dEd,setDEd]=useState<Partial<DLog>>(ED)
-  const[dIsE,setDIsE]=useState(false)
-  const[vets,setVets]=useState<VVis[]>([])
-  const[vMod,setVMod]=useState(false)
-  const[vEd,setVEd]=useState<Partial<VVis>>(EV)
-  const[vIsE,setVIsE]=useState(false)
+function tok(): string { return typeof window === 'undefined' ? '' : localStorage.getItem('token') || '' }
+function fmt(d: string): string {
+  if (!d) return '-'
+  return new Date(d).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
+}
 
-  useEffect(()=>{
-    fetch('/api/cat-health/profile',{headers:{Authorization:`Bearer ${tok()}`}}).then(r=>r.json()).then(d=>{
-      if(d.success&&d.data){const x=d.data;setProf({name:x.name||'',age:x.age||'',gender:x.gender||'',breed:x.breed||'',weight:x.weight?.toString()||'',diagnosis:x.diagnosis||'',clinic:x.clinic||'',doctor:x.doctor||''})}
-    })
-  },[])
+export default function CatHealth() {
+  const [tab, setTab] = useState('profile')
+  const [prof, setProf] = useState<Partial<Prof>>(EP)
+  const [editP, setEditP] = useState(false)
+  const [logs, setLogs] = useState<DLog[]>([])
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [dMod, setDMod] = useState(false)
+  const [dEd, setDEd] = useState<Partial<DLog>>(ED)
+  const [dIsE, setDIsE] = useState(false)
+  const [vets, setVets] = useState<VVis[]>([])
+  const [vMod, setVMod] = useState(false)
+  const [vEd, setVEd] = useState<Partial<VVis>>(EV)
+  const [vIsE, setVIsE] = useState(false)
+  const [vaccs, setVaccs] = useState<Vacc[]>([])
+  const [vcMod, setVcMod] = useState(false)
+  const [vcEd, setVcEd] = useState<Partial<Vacc>>(EVC)
+  const [vcIsE, setVcIsE] = useState(false)
 
-  const fetchLogs=useCallback(async()=>{
-    const r=await fetch(`/api/cat-health/daily-logs?month=${month}`,{headers:{Authorization:`Bearer ${tok()}`}})
-    const d=await r.json();if(d.success)setLogs(d.data)
-  },[month])
+  const fetchProf = useCallback(async () => {
+    const r = await fetch('/api/cat-health/profile', { headers: { Authorization: `Bearer ${tok()}` } })
+    if (r.ok) { const d = await r.json(); setProf(d || EP) }
+  }, [])
+  const fetchLogs = useCallback(async () => {
+    const r = await fetch(`/api/cat-health/daily?month=${month}`, { headers: { Authorization: `Bearer ${tok()}` } })
+    if (r.ok) setLogs(await r.json())
+  }, [month])
+  const fetchVets = useCallback(async () => {
+    const r = await fetch('/api/cat-health/vet', { headers: { Authorization: `Bearer ${tok()}` } })
+    if (r.ok) setVets(await r.json())
+  }, [])
+  const fetchVaccs = useCallback(async () => {
+    const r = await fetch('/api/cat-health/vaccinations', { headers: { Authorization: `Bearer ${tok()}` } })
+    if (r.ok) setVaccs(await r.json())
+  }, [])
 
-  const fetchVets=useCallback(async()=>{
-    const r=await fetch('/api/cat-health/vet-visits',{headers:{Authorization:`Bearer ${tok()}`}})
-    const d=await r.json();if(d.success)setVets(d.data)
-  },[])
+  useEffect(() => { fetchProf() }, [fetchProf])
+  useEffect(() => { if (tab === 'daily') fetchLogs() }, [tab, fetchLogs])
+  useEffect(() => { if (tab === 'vet') fetchVets() }, [tab, fetchVets])
+  useEffect(() => { if (tab === 'vacc') fetchVaccs() }, [tab, fetchVaccs])
 
-  useEffect(()=>{if(tab==='daily')fetchLogs()},[tab,fetchLogs])
-  useEffect(()=>{if(tab==='vet')fetchVets()},[tab,fetchVets])
-
-  async function saveProf(){
-    await fetch('/api/cat-health/profile',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${tok()}`},body:JSON.stringify(prof)})
-    setEditP(false)
+  async function saveProf() {
+    const r = await fetch('/api/cat-health/profile', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify(prof) })
+    if (r.ok) { setEditP(false); fetchProf() }
   }
-  async function saveLog(){
-    const url=dIsE?`/api/cat-health/daily-logs/${dEd.id}`:'/api/cat-health/daily-logs'
-    await fetch(url,{method:dIsE?'PUT':'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${tok()}`},body:JSON.stringify(dEd)})
-    setDMod(false);setDEd(ED);fetchLogs()
+  async function saveLog() {
+    const url = dIsE ? `/api/cat-health/daily/${dEd.id}` : '/api/cat-health/daily'
+    const r = await fetch(url, { method: dIsE ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify(dEd) })
+    if (r.ok) { setDMod(false); setDEd(ED); setDIsE(false); fetchLogs() }
   }
-  async function delLog(id:string){
-    if(!confirm('ยืนยันการลบ?'))return
-    await fetch(`/api/cat-health/daily-logs/${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${tok()}`}});fetchLogs()
+  async function delLog(id: string) {
+    if (!confirm('ลบบันทึกนี้?')) return
+    await fetch(`/api/cat-health/daily/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${tok()}` } })
+    fetchLogs()
   }
-  async function saveVet(){
-    const url=vIsE?`/api/cat-health/vet-visits/${vEd.id}`:'/api/cat-health/vet-visits'
-    await fetch(url,{method:vIsE?'PUT':'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${tok()}`},body:JSON.stringify(vEd)})
-    setVMod(false);setVEd(EV);fetchVets()
+  async function saveVet() {
+    const url = vIsE ? `/api/cat-health/vet/${vEd.id}` : '/api/cat-health/vet'
+    const r = await fetch(url, { method: vIsE ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify(vEd) })
+    if (r.ok) { setVMod(false); setVEd(EV); setVIsE(false); fetchVets() }
   }
-  async function delVet(id:string){
-    if(!confirm('ยืนยันการลบ?'))return
-    await fetch(`/api/cat-health/vet-visits/${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${tok()}`}});fetchVets()
+  async function delVet(id: string) {
+    if (!confirm('ลบบันทึกนี้?')) return
+    await fetch(`/api/cat-health/vet/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${tok()}` } })
+    fetchVets()
+  }
+  async function saveVacc() {
+    const url = vcIsE ? `/api/cat-health/vaccinations/${vcEd.id}` : '/api/cat-health/vaccinations'
+    const r = await fetch(url, { method: vcIsE ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify(vcEd) })
+    if (r.ok) { setVcMod(false); setVcEd(EVC); setVcIsE(false); fetchVaccs() }
+  }
+  async function delVacc(id: string) {
+    if (!confirm('ลบข้อมูลวัคซีนนี้?')) return
+    await fetch(`/api/cat-health/vaccinations/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${tok()}` } })
+    fetchVaccs()
   }
 
-  const profFields:[string,string][]=[
-    ['อายุ',prof.age],['น้ำหนัก',prof.weight?prof.weight+' kg':''],
-    ['โรคที่วินิจฉัย',prof.diagnosis],['คลินิก',prof.clinic],['สัตวแพทย์',prof.doctor]
+  function tabSt(id: string): CSSProperties {
+    const a = tab === id
+    return { padding: '10px 18px', cursor: 'pointer', borderTop: 'none', borderLeft: 'none', borderRight: 'none', borderBottom: a ? '3px solid #6c63ff' : '3px solid transparent', fontWeight: a ? 700 : 400, color: a ? '#6c63ff' : '#666', background: 'none', fontSize: 14, whiteSpace: 'nowrap' as const }
+  }
+
+  const profFields: [string, string][] = [
+    ['ชื่อ', prof.name || '-'], ['สายพันธุ์', prof.breed || '-'],
+    ['สี', prof.color || '-'], ['วันเกิด', fmt(prof.birthDate || '')],
+    ['น้ำหนัก (kg)', prof.weight || '-'], ['ไมโครชิป', prof.microchip || '-'],
+    ['แพ้อะไร', prof.allergy || '-'], ['หมายเหตุ', prof.note || '-'],
   ]
 
-  function tabSt(id:string):CSSProperties{
-    return{padding:'10px 20px',borderRadius:'8px 8px 0 0',border:'none',cursor:'pointer',fontWeight:600,fontSize:'14px',
-      background:tab===id?'#1a1d2e':'transparent',color:tab===id?'#818cf8':'#64748b',
-      borderBottom:tab===id?'2px solid #6366f1':'2px solid transparent'}
-  }
+  const card: CSSProperties = { background: '#fff', borderRadius: 12, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }
+  const btnPrimary: CSSProperties = { padding: '10px 20px', background: '#6c63ff', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }
+  const btnEdit: CSSProperties = { padding: '4px 12px', borderRadius: 6, background: '#f0efff', color: '#6c63ff', border: 'none', cursor: 'pointer' }
+  const btnDel: CSSProperties = { padding: '4px 12px', borderRadius: 6, background: '#fff0f0', color: '#e74c3c', border: 'none', cursor: 'pointer' }
 
-  return(
-    <AppShell>
-      <Header title="สุขภาพแมวน้อย" subtitle={prof.name||'บันทึกการรักษา'}/>
-      <div style={{padding:'24px',flex:1}}>
-        <div style={{display:'flex',gap:'4px',marginBottom:'24px',borderBottom:'1px solid #2d3154'}}>
-          {TABS.map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={tabSt(t.id)}>{t.label}</button>
-          ))}
+  return (
+    <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
+      <Header title="?????????" />
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px' }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 24 }}>🐾 สุขภาพแมว</h1>
+        <div style={{ display: 'flex', borderBottom: '1px solid #eee', marginBottom: 24, overflowX: 'auto' as const }}>
+          {TABS.map(t => <button key={t.id} onClick={() => setTab(t.id)} style={tabSt(t.id)}>{t.label}</button>)}
         </div>
 
-        {tab==='profile'&&(
-          <div style={{maxWidth:'600px'}}>
-            <div style={{background:'#1a1d2e',borderRadius:'16px',border:'1px solid #2d3154',padding:'24px'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px'}}>
-                <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
-                  <div style={{width:'56px',height:'56px',borderRadius:'50%',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'28px'}}>🐱</div>
-                  <div>
-                    <div style={{fontWeight:700,color:'white',fontSize:'18px'}}>{prof.name||'ยังไม่ได้ตั้งชื่อ'}</div>
-                    <div style={{fontSize:'13px',color:'#64748b'}}>{prof.breed||'ไม่ระบุสายพันธุ์'} - {prof.gender||'ไม่ระบุเพศ'}</div>
-                  </div>
+        {tab === 'profile' && (
+          <div style={card}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700 }}>ข้อมูลส่วนตัวแมว</h2>
+              <button onClick={() => setEditP(!editP)} style={{ ...btnPrimary, background: editP ? '#eee' : '#6c63ff', color: editP ? '#333' : '#fff' }}>
+                {editP ? 'ยกเลิก' : '✏️ แก้ไข'}
+              </button>
+            </div>
+            {!editP ? (
+              <div style={IS}>{profFields.map(([k, v]) => (
+                <div key={k}><div style={{ fontSize: 12, color: '#888', marginBottom: 2 }}>{k}</div><div style={{ fontWeight: 500 }}>{v}</div></div>
+              ))}</div>
+            ) : (
+              <div>
+                <div style={IS}>
+                  <div><Lbl t="ชื่อ" /><Inp val={prof.name || ''} onChange={v => setProf({ ...prof, name: v })} /></div>
+                  <div><Lbl t="สายพันธุ์" /><Inp val={prof.breed || ''} onChange={v => setProf({ ...prof, breed: v })} /></div>
+                  <div><Lbl t="สี" /><Inp val={prof.color || ''} onChange={v => setProf({ ...prof, color: v })} /></div>
+                  <div><Lbl t="วันเกิด" /><Inp val={prof.birthDate || ''} onChange={v => setProf({ ...prof, birthDate: v })} type="date" /></div>
+                  <div><Lbl t="น้ำหนัก (kg)" /><Inp val={prof.weight || ''} onChange={v => setProf({ ...prof, weight: v })} /></div>
+                  <div><Lbl t="ไมโครชิป" /><Inp val={prof.microchip || ''} onChange={v => setProf({ ...prof, microchip: v })} /></div>
                 </div>
-                <button onClick={()=>setEditP(true)} style={{padding:'8px 16px',borderRadius:'8px',background:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.2)',color:'#818cf8',cursor:'pointer',fontWeight:600}}>แก้ไข</button>
+                <div style={{ marginTop: 12 }}><Lbl t="แพ้อะไร" /><Inp val={prof.allergy || ''} onChange={v => setProf({ ...prof, allergy: v })} /></div>
+                <div style={{ marginTop: 12 }}><Lbl t="หมายเหตุ" /><textarea value={prof.note || ''} onChange={e => setProf({ ...prof, note: e.target.value })} style={TA} rows={3} /></div>
+                <button onClick={saveProf} style={{ ...btnPrimary, marginTop: 16 }}>💾 บันทึก</button>
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
-                {profFields.map(([l,v])=>(
-                  <div key={l} style={{background:'#0f1117',borderRadius:'8px',padding:'12px'}}>
-                    <div style={{fontSize:'11px',color:'#64748b',marginBottom:'4px'}}>{l}</div>
-                    <div style={{fontSize:'14px',color:v?'white':'#4a5568'}}>{v||'ไม่ได้ระบุ'}</div>
+            )}
+          </div>
+        )}
+
+        {tab === 'daily' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <input type="month" value={month} onChange={e => setMonth(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ddd' }} />
+              <button onClick={() => { setDEd(ED); setDIsE(false); setDMod(true) }} style={btnPrimary}>+ เพิ่มบันทึก</button>
+            </div>
+            {logs.length === 0 ? <p style={{ color: '#888', textAlign: 'center' as const, padding: 40 }}>ยังไม่มีบันทึกในเดือนนี้</p> : (
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+                {logs.map(l => (
+                  <div key={l.id} style={card}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ fontWeight: 700, fontSize: 16 }}>{fmt(l.logDate)}</div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => { setDEd(l); setDIsE(true); setDMod(true) }} style={btnEdit}>แก้ไข</button>
+                        <button onClick={() => delLog(l.id)} style={btnDel}>ลบ</button>
+                      </div>
+                    </div>
+                    <div style={{ ...IS, marginTop: 12 }}>
+                      <div><span style={{ color: '#888', fontSize: 12 }}>น้ำหนัก: </span>{l.weight || '-'} kg</div>
+                      <div><span style={{ color: '#888', fontSize: 12 }}>อาหาร: </span>{l.food || '-'}</div>
+                      <div><span style={{ color: '#888', fontSize: 12 }}>น้ำ: </span>{l.water || '-'}</div>
+                      <div><span style={{ color: '#888', fontSize: 12 }}>อุจจาระ: </span>{l.poop || '-'}</div>
+                      <div><span style={{ color: '#888', fontSize: 12 }}>อารมณ์: </span>{l.mood || '-'}</div>
+                      <div><span style={{ color: '#888', fontSize: 12 }}>อาการ: </span>{l.symptom || '-'}</div>
+                    </div>
+                    {l.note && <div style={{ marginTop: 8, color: '#555', fontSize: 13 }}>📝 {l.note}</div>}
                   </div>
                 ))}
               </div>
-            </div>
+            )}
           </div>
         )}
 
-        {tab==='daily'&&(
+        {tab === 'vet' && (
           <div>
-            <div style={{display:'flex',gap:'12px',marginBottom:'20px',alignItems:'center'}}>
-              <input type="month" value={month} onChange={e=>setMonth(e.target.value)} style={{padding:'10px 14px',borderRadius:'10px',background:'#1a1d2e',border:'1px solid #2d3154',color:'white',outline:'none'}}/>
-              <button onClick={()=>{setDEd({...ED,logDate:new Date().toISOString().split('T')[0]});setDIsE(false);setDMod(true)}}
-                style={{marginLeft:'auto',padding:'10px 20px',borderRadius:'10px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'white',border:'none',cursor:'pointer',fontWeight:600}}>
-                + บันทึกวันนี้
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <button onClick={() => { setVEd(EV); setVIsE(false); setVMod(true) }} style={btnPrimary}>+ เพิ่มบันทึก</button>
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:'8px'}}>
-              {logs.length===0?(
-                <div style={{padding:'40px',textAlign:'center',color:'#4a5568'}}>ยังไม่มีบันทึก</div>
-              ):logs.map(log=>(
-                <div key={log.id} style={{background:'#1a1d2e',borderRadius:'12px',border:'1px solid #2d3154',padding:'14px 16px'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'10px'}}>
-                    <div style={{fontWeight:700,color:'white',fontSize:'14px'}}>
-                      {new Date(log.logDate).toLocaleDateString('th-TH',{weekday:'short',year:'numeric',month:'short',day:'numeric'})}
-                    </div>
-                    <div style={{display:'flex',gap:'4px'}}>
-                      <button onClick={()=>{setDEd({...log});setDIsE(true);setDMod(true)}} style={{padding:'4px 8px',borderRadius:'6px',background:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.2)',color:'#818cf8',cursor:'pointer'}}>แก้ไข</button>
-                      <button onClick={()=>delLog(log.id)} style={{padding:'4px 8px',borderRadius:'6px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)',color:'#f87171',cursor:'pointer'}}>ลบ</button>
-                    </div>
-                  </div>
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:'6px',fontSize:'12px'}}>
-                    {log.medicine&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'5px 8px'}}><span style={{color:'#64748b'}}>ยา: </span>{log.medicine}</div>}
-                    {log.foodIntake&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'5px 8px'}}><span style={{color:'#64748b'}}>กินข้าว: </span>{log.foodIntake}</div>}
-                    {log.waterIntake&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'5px 8px'}}><span style={{color:'#64748b'}}>น้ำ: </span>{log.waterIntake}</div>}
-                    {log.behavior&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'5px 8px'}}><span style={{color:'#64748b'}}>พฤติกรรม: </span>{log.behavior}</div>}
-                    {log.excretion&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'5px 8px'}}><span style={{color:'#64748b'}}>ขับถ่าย: </span>{log.excretion}</div>}
-                    {log.temperature&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'5px 8px'}}><span style={{color:'#64748b'}}>อุณหภูมิ: </span>{log.temperature}C</div>}
-                    {log.weight&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'5px 8px'}}><span style={{color:'#64748b'}}>น้ำหนัก: </span>{log.weight} kg</div>}
-                    {log.symptoms&&<div style={{background:'rgba(239,68,68,0.05)',borderRadius:'6px',padding:'5px 8px',border:'1px solid rgba(239,68,68,0.15)'}}><span style={{color:'#f87171'}}>อาการ: </span>{log.symptoms}</div>}
-                  </div>
-                  {log.note&&<div style={{marginTop:'6px',fontSize:'12px',color:'#64748b'}}>{log.note}</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {tab==='vet'&&(
-          <div>
-            <div style={{display:'flex',justifyContent:'flex-end',marginBottom:'20px'}}>
-              <button onClick={()=>{setVEd({...EV,visitDate:new Date().toISOString().split('T')[0]});setVIsE(false);setVMod(true)}}
-                style={{padding:'10px 20px',borderRadius:'10px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'white',border:'none',cursor:'pointer',fontWeight:600}}>
-                + บันทึกพบหมอ
-              </button>
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-              {vets.length===0?(
-                <div style={{padding:'40px',textAlign:'center',color:'#4a5568'}}>ยังไม่มีบันทึก</div>
-              ):vets.map(v=>(
-                <div key={v.id} style={{background:'#1a1d2e',borderRadius:'12px',border:'1px solid #2d3154',padding:'16px'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'10px'}}>
-                    <div>
-                      <div style={{fontWeight:700,color:'white',fontSize:'15px'}}>
-                        {new Date(v.visitDate).toLocaleDateString('th-TH',{weekday:'short',year:'numeric',month:'short',day:'numeric'})}
+            {vets.length === 0 ? <p style={{ color: '#888', textAlign: 'center' as const, padding: 40 }}>ยังไม่มีบันทึกการพบหมอ</p> : (
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+                {vets.map(v => (
+                  <div key={v.id} style={card}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 16 }}>{fmt(v.visitDate)}</div>
+                        <div style={{ color: '#6c63ff', fontWeight: 600 }}>{v.clinic}{v.doctor ? ` — ${v.doctor}` : ''}</div>
                       </div>
-                      {v.cost&&<div style={{fontSize:'13px',color:'#f59e0b',marginTop:'2px'}}>ค่าใช้จ่าย: {fmt(parseFloat(v.cost))} บาท</div>}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => { setVEd(v); setVIsE(true); setVMod(true) }} style={btnEdit}>แก้ไข</button>
+                        <button onClick={() => delVet(v.id)} style={btnDel}>ลบ</button>
+                      </div>
                     </div>
-                    <div style={{display:'flex',gap:'4px'}}>
-                      <button onClick={()=>{setVEd({...v});setVIsE(true);setVMod(true)}} style={{padding:'4px 8px',borderRadius:'6px',background:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.2)',color:'#818cf8',cursor:'pointer'}}>แก้ไข</button>
-                      <button onClick={()=>delVet(v.id)} style={{padding:'4px 8px',borderRadius:'6px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.2)',color:'#f87171',cursor:'pointer'}}>ลบ</button>
+                    <div style={{ marginTop: 12 }}>
+                      {v.reason && <div><span style={{ color: '#888', fontSize: 12 }}>เหตุผล: </span>{v.reason}</div>}
+                      {v.diagnosis && <div><span style={{ color: '#888', fontSize: 12 }}>การวินิจฉัย: </span>{v.diagnosis}</div>}
+                      {v.treatment && <div><span style={{ color: '#888', fontSize: 12 }}>การรักษา: </span>{v.treatment}</div>}
+                      {v.cost && <div><span style={{ color: '#888', fontSize: 12 }}>ค่าใช้จ่าย: </span>฿{v.cost}</div>}
+                      {v.nextDate && <div style={{ marginTop: 4, color: '#2ecc71', fontWeight: 600 }}>📅 นัดครั้งต่อไป: {fmt(v.nextDate)}</div>}
+                      {v.note && <div style={{ marginTop: 4, color: '#555', fontSize: 13 }}>📝 {v.note}</div>}
                     </div>
                   </div>
-                  <div style={{display:'flex',flexDirection:'column',gap:'5px',fontSize:'13px'}}>
-                    {v.results&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'7px 10px'}}><span style={{color:'#64748b'}}>ผลตรวจ: </span>{v.results}</div>}
-                    {v.bloodValues&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'7px 10px'}}><span style={{color:'#64748b'}}>ค่าเลือด: </span>{v.bloodValues}</div>}
-                    {v.additionalDiag&&<div style={{background:'#0f1117',borderRadius:'6px',padding:'7px 10px'}}><span style={{color:'#64748b'}}>วินิจฉัย: </span>{v.additionalDiag}</div>}
-                    {v.medicationChange&&<div style={{background:'rgba(99,102,241,0.05)',borderRadius:'6px',padding:'7px 10px',border:'1px solid rgba(99,102,241,0.1)'}}><span style={{color:'#818cf8'}}>ยา/แผนรักษา: </span>{v.medicationChange}</div>}
-                  </div>
-                  {v.note&&<div style={{marginTop:'8px',fontSize:'12px',color:'#64748b'}}>{v.note}</div>}
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'vacc' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+              <button onClick={() => { setVcEd(EVC); setVcIsE(false); setVcMod(true) }} style={btnPrimary}>+ เพิ่มวัคซีน</button>
             </div>
+            {vaccs.length === 0 ? <p style={{ color: '#888', textAlign: 'center' as const, padding: 40 }}>ยังไม่มีบันทึกวัคซีน</p> : (
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+                {vaccs.map(v => {
+                  const overdue = !!(v.nextDate && new Date(v.nextDate) < new Date())
+                  return (
+                    <div key={v.id} style={{ ...card, border: overdue ? '2px solid #e74c3c' : '2px solid transparent' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{v.vaccineName}</div>
+                          {overdue && <span style={{ background: '#e74c3c', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>เกินนัด!</span>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => { setVcEd(v); setVcIsE(true); setVcMod(true) }} style={btnEdit}>แก้ไข</button>
+                          <button onClick={() => delVacc(v.id)} style={btnDel}>ลบ</button>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 12 }}>
+                        <div><span style={{ color: '#888', fontSize: 12 }}>วันที่ฉีด: </span>{fmt(v.vacDate)}</div>
+                        {v.nextDate && <div style={{ color: overdue ? '#e74c3c' : '#2ecc71', fontWeight: 600, marginTop: 4 }}>📅 นัดครั้งต่อไป: {fmt(v.nextDate)}</div>}
+                        {v.clinic && <div style={{ marginTop: 4 }}><span style={{ color: '#888', fontSize: 12 }}>คลินิก/หมอ: </span>{v.clinic}</div>}
+                        {v.note && <div style={{ marginTop: 4, color: '#555', fontSize: 13 }}>📝 {v.note}</div>}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      <Modal open={editP} onClose={()=>setEditP(false)} title="แก้ไขข้อมูลแมว">
-        <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-            <div><Lbl t="ชื่อแมว"/><Inp v={prof.name} fn={x=>setProf({...prof,name:x})} ph="ชื่อน้อง"/></div>
-            <div><Lbl t="อายุ"/><Inp v={prof.age} fn={x=>setProf({...prof,age:x})} ph="เช่น 2 ปี 3 เดือน"/></div>
-            <div><Lbl t="เพศ"/><Sel v={prof.gender} fn={x=>setProf({...prof,gender:x})} opts={['','ผู้','เมีย']}/></div>
-            <div><Lbl t="สายพันธุ์"/><Inp v={prof.breed} fn={x=>setProf({...prof,breed:x})} ph="เช่น Scottish Fold"/></div>
-            <div><Lbl t="น้ำหนัก (kg)"/><Inp v={prof.weight} fn={x=>setProf({...prof,weight:x})} ph="3.5" tp="number"/></div>
-            <div><Lbl t="โรคที่วินิจฉัย"/><Inp v={prof.diagnosis} fn={x=>setProf({...prof,diagnosis:x})} ph="เช่น FIP, CKD"/></div>
-            <div><Lbl t="ชื่อคลินิก"/><Inp v={prof.clinic} fn={x=>setProf({...prof,clinic:x})} ph="ชื่อคลินิก"/></div>
-            <div><Lbl t="ชื่อสัตวแพทย์"/><Inp v={prof.doctor} fn={x=>setProf({...prof,doctor:x})} ph="ชื่อหมอ"/></div>
+      <Modal open={dMod} onClose={() => { setDMod(false); setDEd(ED); setDIsE(false) }} title={dIsE ? 'แก้ไขบันทึกรายวัน' : 'เพิ่มบันทึกรายวัน'}>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+          <div><Lbl t="วันที่" /><Inp val={dEd.logDate || ''} onChange={v => setDEd({ ...dEd, logDate: v })} type="date" /></div>
+          <div style={IS}>
+            <div><Lbl t="น้ำหนัก (kg)" /><Inp val={dEd.weight || ''} onChange={v => setDEd({ ...dEd, weight: v })} /></div>
+            <div><Lbl t="อาหาร" /><Inp val={dEd.food || ''} onChange={v => setDEd({ ...dEd, food: v })} /></div>
+            <div><Lbl t="น้ำ" /><Inp val={dEd.water || ''} onChange={v => setDEd({ ...dEd, water: v })} /></div>
+            <div><Lbl t="อุจจาระ" /><Inp val={dEd.poop || ''} onChange={v => setDEd({ ...dEd, poop: v })} /></div>
+            <div><Lbl t="อารมณ์" /><Inp val={dEd.mood || ''} onChange={v => setDEd({ ...dEd, mood: v })} /></div>
+            <div><Lbl t="อาการ" /><Inp val={dEd.symptom || ''} onChange={v => setDEd({ ...dEd, symptom: v })} /></div>
           </div>
-          <div style={{display:'flex',gap:'10px',marginTop:'8px'}}>
-            <button onClick={()=>setEditP(false)} style={{flex:1,padding:'10px',borderRadius:'8px',background:'rgba(148,163,184,0.1)',border:'1px solid #2d3154',color:'#94a3b8',cursor:'pointer'}}>ยกเลิก</button>
-            <button onClick={saveProf} style={{flex:1,padding:'10px',borderRadius:'8px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',color:'white',cursor:'pointer',fontWeight:600}}>บันทึก</button>
-          </div>
+          <div><Lbl t="หมายเหตุ" /><textarea value={dEd.note || ''} onChange={e => setDEd({ ...dEd, note: e.target.value })} style={TA} rows={3} /></div>
+          <button onClick={saveLog} style={btnPrimary}>💾 บันทึก</button>
         </div>
       </Modal>
 
-      <Modal open={dMod} onClose={()=>setDMod(false)} title={dIsE?'แก้ไขบันทึกรายวัน':'บันทึกประจำวัน'}>
-        <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-          <div><Lbl t="วันที่"/><Inp v={dEd.logDate||''} fn={x=>setDEd({...dEd,logDate:x})} tp="date"/></div>
-          <div><Lbl t="ยาที่ให้ (ชื่อ/ขนาด/เวลา)"/><Inp v={dEd.medicine||''} fn={x=>setDEd({...dEd,medicine:x})} ph="เช่น Prednisolone 5mg เช้า-เย็น"/></div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'10px'}}>
-            <div><Lbl t="กินข้าว"/><Sel v={dEd.foodIntake||'กินเอง'} fn={x=>setDEd({...dEd,foodIntake:x})} opts={FOOD}/></div>
-            <div><Lbl t="ดื่มน้ำ"/><Sel v={dEd.waterIntake||'ดื่มน้อย'} fn={x=>setDEd({...dEd,waterIntake:x})} opts={WATER}/></div>
-            <div><Lbl t="พฤติกรรม"/><Sel v={dEd.behavior||'ปกติ'} fn={x=>setDEd({...dEd,behavior:x})} opts={BEHAV}/></div>
+      <Modal open={vMod} onClose={() => { setVMod(false); setVEd(EV); setVIsE(false) }} title={vIsE ? 'แก้ไขบันทึกพบหมอ' : 'เพิ่มบันทึกพบหมอ'}>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+          <div style={IS}>
+            <div><Lbl t="วันที่" /><Inp val={vEd.visitDate || ''} onChange={v => setVEd({ ...vEd, visitDate: v })} type="date" /></div>
+            <div><Lbl t="คลินิก" /><Inp val={vEd.clinic || ''} onChange={v => setVEd({ ...vEd, clinic: v })} /></div>
+            <div><Lbl t="หมอ" /><Inp val={vEd.doctor || ''} onChange={v => setVEd({ ...vEd, doctor: v })} /></div>
+            <div><Lbl t="ค่าใช้จ่าย (฿)" /><Inp val={vEd.cost || ''} onChange={v => setVEd({ ...vEd, cost: v })} /></div>
           </div>
-          <div><Lbl t="การขับถ่าย"/><Inp v={dEd.excretion||''} fn={x=>setDEd({...dEd,excretion:x})} ph="เช่น ปัสสาวะสีเหลือง อุจจาระปกติ"/></div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
-            <div><Lbl t="อุณหภูมิ (C)"/><Inp v={dEd.temperature||''} fn={x=>setDEd({...dEd,temperature:x})} ph="38.5" tp="number"/></div>
-            <div><Lbl t="น้ำหนัก (kg)"/><Inp v={dEd.weight||''} fn={x=>setDEd({...dEd,weight:x})} ph="3.5" tp="number"/></div>
-          </div>
-          <div><Lbl t="อาการผิดปกติ"/><Inp v={dEd.symptoms||''} fn={x=>setDEd({...dEd,symptoms:x})} ph="เช่น อาเจียน ไม่กระตือรือร้น"/></div>
-          <div><Lbl t="หมายเหตุ"/><Inp v={dEd.note||''} fn={x=>setDEd({...dEd,note:x})} ph="บันทึกเพิ่มเติม"/></div>
-          <div style={{display:'flex',gap:'10px',marginTop:'8px'}}>
-            <button onClick={()=>setDMod(false)} style={{flex:1,padding:'10px',borderRadius:'8px',background:'rgba(148,163,184,0.1)',border:'1px solid #2d3154',color:'#94a3b8',cursor:'pointer'}}>ยกเลิก</button>
-            <button onClick={saveLog} style={{flex:1,padding:'10px',borderRadius:'8px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',color:'white',cursor:'pointer',fontWeight:600}}>{dIsE?'บันทึก':'เพิ่ม'}</button>
-          </div>
+          <div><Lbl t="เหตุผล" /><Inp val={vEd.reason || ''} onChange={v => setVEd({ ...vEd, reason: v })} /></div>
+          <div><Lbl t="การวินิจฉัย" /><Inp val={vEd.diagnosis || ''} onChange={v => setVEd({ ...vEd, diagnosis: v })} /></div>
+          <div><Lbl t="การรักษา" /><Inp val={vEd.treatment || ''} onChange={v => setVEd({ ...vEd, treatment: v })} /></div>
+          <div><Lbl t="นัดครั้งต่อไป" /><Inp val={vEd.nextDate || ''} onChange={v => setVEd({ ...vEd, nextDate: v })} type="date" /></div>
+          <div><Lbl t="หมายเหตุ" /><textarea value={vEd.note || ''} onChange={e => setVEd({ ...vEd, note: e.target.value })} style={TA} rows={3} /></div>
+          <button onClick={saveVet} style={btnPrimary}>💾 บันทึก</button>
         </div>
       </Modal>
 
-      <Modal open={vMod} onClose={()=>setVMod(false)} title={vIsE?'แก้ไขบันทึกพบหมอ':'บันทึกพบหมอ'}>
-        <div style={{display:'flex',flexDirection:'column',gap:'12px'}}>
-          <div><Lbl t="วันที่พบหมอ"/><Inp v={vEd.visitDate||''} fn={x=>setVEd({...vEd,visitDate:x})} tp="date"/></div>
-          <div><Lbl t="ผลตรวจ"/><textarea value={vEd.results||''} onChange={e=>setVEd({...vEd,results:e.target.value})} rows={2} placeholder="ผลการตรวจร่างกาย" style={TA}/></div>
-          <div><Lbl t="ค่าเลือด"/><Inp v={vEd.bloodValues||''} fn={x=>setVEd({...vEd,bloodValues:x})} ph="เช่น BUN 30, Creatinine 2.1"/></div>
-          <div><Lbl t="การวินิจฉัยเพิ่มเติม"/><Inp v={vEd.additionalDiag||''} fn={x=>setVEd({...vEd,additionalDiag:x})} ph=""/></div>
-          <div><Lbl t="ยา/แผนการรักษาที่เปลี่ยน"/><textarea value={vEd.medicationChange||''} onChange={e=>setVEd({...vEd,medicationChange:e.target.value})} rows={2} placeholder="รายการยา/วิธีรักษา" style={TA}/></div>
-          <div><Lbl t="ค่าใช้จ่าย (บาท)"/><Inp v={vEd.cost||''} fn={x=>setVEd({...vEd,cost:x})} ph="0" tp="number"/></div>
-          <div><Lbl t="หมายเหตุ"/><Inp v={vEd.note||''} fn={x=>setVEd({...vEd,note:x})} ph="บันทึกเพิ่มเติม"/></div>
-          <div style={{display:'flex',gap:'10px',marginTop:'8px'}}>
-            <button onClick={()=>setVMod(false)} style={{flex:1,padding:'10px',borderRadius:'8px',background:'rgba(148,163,184,0.1)',border:'1px solid #2d3154',color:'#94a3b8',cursor:'pointer'}}>ยกเลิก</button>
-            <button onClick={saveVet} style={{flex:1,padding:'10px',borderRadius:'8px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',color:'white',cursor:'pointer',fontWeight:600}}>{vIsE?'บันทึก':'เพิ่ม'}</button>
+      <Modal open={vcMod} onClose={() => { setVcMod(false); setVcEd(EVC); setVcIsE(false) }} title={vcIsE ? 'แก้ไขข้อมูลวัคซีน' : 'เพิ่มข้อมูลวัคซีน'}>
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+          <div><Lbl t="ชื่อวัคซีน" /><Inp val={vcEd.vaccineName || ''} onChange={v => setVcEd({ ...vcEd, vaccineName: v })} placeholder="Tricat, Rabies, FeLV..." /></div>
+          <div style={IS}>
+            <div><Lbl t="วันที่ฉีด" /><Inp val={vcEd.vacDate || ''} onChange={v => setVcEd({ ...vcEd, vacDate: v })} type="date" /></div>
+            <div><Lbl t="วันนัดครั้งต่อไป" /><Inp val={vcEd.nextDate || ''} onChange={v => setVcEd({ ...vcEd, nextDate: v })} type="date" /></div>
           </div>
+          <div><Lbl t="คลินิก/หมอ" /><Inp val={vcEd.clinic || ''} onChange={v => setVcEd({ ...vcEd, clinic: v })} /></div>
+          <div><Lbl t="หมายเหตุ" /><textarea value={vcEd.note || ''} onChange={e => setVcEd({ ...vcEd, note: e.target.value })} style={TA} rows={3} /></div>
+          <button onClick={saveVacc} style={btnPrimary}>💾 บันทึก</button>
         </div>
       </Modal>
-    </AppShell>
+    </div>
   )
 }

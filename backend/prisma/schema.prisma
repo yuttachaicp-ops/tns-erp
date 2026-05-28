@@ -29,6 +29,7 @@ model User {
   catProfile    CatProfile?
   catDailyLogs  CatDailyLog[]
   catVetVisits  CatVetVisit[]
+  catVaccinations CatVaccination[]
   @@map("users")
 }
 
@@ -201,4 +202,18 @@ model CatVetVisit {
   updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id])
   @@map("cat_vet_visits")
+}
+model CatVaccination {
+  id          String    @id @default(cuid())
+  userId      String
+  vaccineName String
+  vacDate     DateTime  @default(now())
+  nextDate    DateTime?
+  clinic      String?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@map("cat_vaccinations")
 }
