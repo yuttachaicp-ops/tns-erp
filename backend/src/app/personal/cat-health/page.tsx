@@ -94,6 +94,7 @@ export default function CatHealth() {
   const [tab, setTab] = useState('profile')
   const [catMod, setCatMod] = useState(false)
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const photoFileRef = useRef<File | null>(null)
   const [catEd, setCatEd] = useState<Partial<Cat>>(EC)
   const [catSaving, setCatSaving] = useState(false)
   const [catErr, setCatErr] = useState('')
@@ -139,11 +140,50 @@ export default function CatHealth() {
 
   const selectedCat = cats.find(c => c.id === catId)
 
+  async function resizeToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const blobUrl = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        URL.revokeObjectURL(blobUrl)
+        const MAX = 600
+        const ratio = Math.min(MAX / img.width, MAX / img.height, 1)
+        const w = Math.round(img.width * ratio)
+        const h = Math.round(img.height * ratio)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { reject(new Error('canvas error')); return }
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
+      }
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error('image load error')) }
+      img.src = blobUrl
+    })
+  }
+
   async function saveCat() {
     setCatSaving(true); setCatErr('')
     try {
+      let avatar = catEd.avatar || ''
+      // blob: URL = รูปใหม่ที่เพิ่งเลือก → resize แล้ว convert เป็น base64
+      if (avatar.startsWith('blob:') && photoFileRef.current) {
+        try {
+          avatar = await resizeToBase64(photoFileRef.current)
+          photoFileRef.current = null
+        } catch {
+          // ถ้า canvas ล้มเหลว ใช้ FileReader แทน
+          avatar = await new Promise<string>((res, rej) => {
+            const r = new FileReader()
+            r.onload = ev => res(ev.target?.result as string)
+            r.onerror = rej
+            r.readAsDataURL(photoFileRef.current!)
+          })
+          photoFileRef.current = null
+        }
+      }
       const url = catIsE ? `/api/cat-health/cats/${catEd.id}` : '/api/cat-health/cats'
-      const r = await fetch(url, { method: catIsE ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify(catEd) })
+      const r = await fetch(url, { method: catIsE ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify({ ...catEd, avatar }) })
       if (r.ok) { const d = await r.json(); setCatMod(false); setCatEd(EC); setCatIsE(false); await fetchCats(); if (!catIsE) setCatId(d.id) }
       else { const e = await r.json().catch(() => ({})); setCatErr(e.error || `บันทึกไม่สำเร็จ (${r.status})`) }
     } catch (e: any) { setCatErr('เกิดข้อผิดพลาด: ' + e.message) }
@@ -394,18 +434,12 @@ export default function CatHealth() {
                     const file = e.target.files?.[0]
                     if (!file) return
                     setCatErr('')
-                    if (file.size > 5 * 1024 * 1024) { setCatErr('รูปใหญ่เกิน 5MB กรุณาเลือกรูปที่เล็กกว่า'); return }
-                    const reader = new FileReader()
-                    reader.onload = ev => {
-                      const dataUrl = ev.target?.result as string
-                      if (!dataUrl || !dataUrl.startsWith('data:image')) {
-                        setCatErr('อ่านไฟล์ไม่ได้ กรุณาเลือกไฟล์รูปภาพ')
-                        return
-                      }
-                      setCatEd(prev => ({ ...prev, avatar: dataUrl }))
-                    }
-                    reader.onerror = () => setCatErr('อ่านไฟล์ไม่ได้')
-                    reader.readAsDataURL(file)
+                    if (file.size > 20 * 1024 * 1024) { setCatErr('รูปใหญ่เกิน 20MB'); return }
+                    // เก็บ file ไว้ resize ตอน save
+                    photoFileRef.current = file
+                    // ใช้ blob URL สำหรับ preview — เร็ว ไม่มีปัญหา memory
+                    const blobUrl = URL.createObjectURL(file)
+                    setCatEd(prev => ({ ...prev, avatar: blobUrl }))
                   }} />
                 <button type="button" onClick={() => photoInputRef.current?.click()}
                   style={{ cursor: 'pointer', background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', fontSize: 13 }}>
