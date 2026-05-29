@@ -173,7 +173,13 @@ export default function CatHealth() {
           avatar = await resizeToBase64(photoFileRef.current)
           photoFileRef.current = null
         } catch {
-          // ถ้า canvas ล้มเหลว ใช้ FileReader แทน
+          // canvas ล้มเหลว (เช่น HEIC บน iOS) → ใช้ FileReader แต่เช็ค size ด้วย
+          if (photoFileRef.current.size > 500 * 1024) {
+            photoFileRef.current = null
+            setCatErr('รูปใหญ่เกินไปสำหรับมือถือ กรุณาบีบอัดรูปก่อน หรือเลือกรูปที่มีขนาดเล็กกว่า 500KB')
+            setCatSaving(false)
+            return
+          }
           avatar = await new Promise<string>((res, rej) => {
             const r = new FileReader()
             r.onload = ev => res(ev.target?.result as string)
@@ -181,6 +187,12 @@ export default function CatHealth() {
             r.readAsDataURL(photoFileRef.current!)
           })
           photoFileRef.current = null
+        }
+        // ตรวจ size สุดท้าย — base64 ไม่ควรเกิน 200KB
+        if (avatar.length > 200 * 1024) {
+          setCatErr('รูปยังใหญ่เกินไป กรุณาเลือกรูปขนาดเล็กกว่านี้')
+          setCatSaving(false)
+          return
         }
       }
       const url = catIsE ? `/api/cat-health/cats/${catEd.id}` : '/api/cat-health/cats'
