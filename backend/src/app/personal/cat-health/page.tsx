@@ -173,9 +173,10 @@ export default function CatHealth() {
           avatar = await resizeToBase64(photoFileRef.current)
           photoFileRef.current = null
         } catch {
-          // canvas ล้มเหลว (เช่น HEIC บน iOS) → ใช้ FileReader แต่เช็ค size ด้วย
-          if (photoFileRef.current.size > 500 * 1024) {
-            photoFileRef.current = null
+          // canvas ล้มเหลว → ใช้ FileReader แต่เช็ค size ด้วย
+          const fallbackFile = photoFileRef.current
+          photoFileRef.current = null
+          if (!fallbackFile || fallbackFile.size > 500 * 1024) {
             setCatErr('รูปใหญ่เกินไปสำหรับมือถือ กรุณาบีบอัดรูปก่อน หรือเลือกรูปที่มีขนาดเล็กกว่า 500KB')
             setCatSaving(false)
             return
@@ -184,9 +185,8 @@ export default function CatHealth() {
             const r = new FileReader()
             r.onload = ev => res(ev.target?.result as string)
             r.onerror = rej
-            r.readAsDataURL(photoFileRef.current!)
+            r.readAsDataURL(fallbackFile)
           })
-          photoFileRef.current = null
         }
         // ตรวจ size สุดท้าย — base64 ไม่ควรเกิน 200KB
         if (avatar.length > 200 * 1024) {
