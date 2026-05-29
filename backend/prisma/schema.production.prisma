@@ -69,6 +69,7 @@ model User {
   catVetVisits    CatVetVisit[]
   catVaccinations CatVaccination[]
   cats            Cat[]
+  mortgages       Mortgage[]
   @@map("users")
 }
 
@@ -283,4 +284,20 @@ model CatVaccination {
   user        User      @relation(fields: [userId], references: [id])
   cat         Cat       @relation(fields: [catId], references: [id])
   @@map("cat_vaccinations")
+}
+model Mortgage {
+  id                String   @id @default(cuid())
+  userId            String
+  name              String
+  bankName          String?
+  totalAmount       Float
+  monthlyPayment    Float
+  totalInstallments Int
+  paidInstallments  Int      @default(0)
+  startDate         String?
+  note              String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id])
+  @@map("mortgages")
 }
