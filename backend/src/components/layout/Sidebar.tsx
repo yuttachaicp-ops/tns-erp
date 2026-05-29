@@ -18,6 +18,8 @@ const PERSONAL_MENU = [
   { href:'/personal', icon:'🏠', label:'Dashboard' },
   { href:'/income-expense', icon:'💰', label:'รายรับ-รายจ่าย' },
   { href:'/personal/mortgage', icon:'🏡', label:'ผ่อนบ้าน' },
+  { href:'/personal/car-loans', icon:'🚗', label:'ผ่อนรถ' },
+  { href:'/personal/savings-goals', icon:'🎯', label:'เป้าหมายการออม' },
   { href:'/personal/cat-health', icon:'🐾', label:'สุขภาพแมวน้อย' },
   { href:'/bills', icon:'🧾', label:'บิลรายเดือน' },
 ]
