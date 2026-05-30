@@ -258,9 +258,11 @@ export default function CatHealth() {
           <div style={{ display: 'flex', gap: 12, marginBottom: 24, overflowX: 'auto' as const, paddingBottom: 8 }}>
             {cats.map(c => (
               <div key={c.id} onClick={() => setCatId(c.id)}
-                style={{ flexShrink: 0, cursor: 'pointer', background: c.id === catId ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#1a1d2e', borderRadius: 16, padding: '16px 20px', border: c.id === catId ? '2px solid #6366f1' : '1px solid #2d3154', textAlign: 'center' as const, minWidth: 100, transition: 'all 0.2s' }}>
-                <img src={avatarSrc(c.avatar)} width={48} height={48} alt={c.name} style={{ borderRadius: 8, objectFit: 'cover' as const }} onError={e => { (e.target as HTMLImageElement).src = '/cat-avatars/orange.svg' }} />
-                <div style={{ fontWeight: 700, color: 'white', fontSize: 14 }}>{c.name}</div>
+                style={{ flexShrink: 0, cursor: 'pointer', background: c.id === catId ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : '#1a1d2e', borderRadius: 16, padding: '12px 16px', border: c.id === catId ? '2px solid #6366f1' : '1px solid #2d3154', textAlign: 'center' as const, minWidth: 110, transition: 'all 0.2s' }}>
+                <div style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', margin: '0 auto 8px', border: c.id === catId ? '2px solid rgba(255,255,255,0.3)' : '2px solid #2d3154', background: '#0f1117' }}>
+                  <img src={avatarSrc(c.avatar)} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' as const, objectPosition: 'center top', display: 'block' }} onError={e => { (e.target as HTMLImageElement).src = '/cat-avatars/orange.svg' }} />
+                </div>
+                <div style={{ fontWeight: 700, color: 'white', fontSize: 13 }}>{c.name}</div>
                 {c.breed && <div style={{ color: c.id === catId ? 'rgba(255,255,255,0.8)' : '#64748b', fontSize: 11, marginTop: 2 }}>{c.breed}</div>}
               </div>
             ))}
@@ -276,8 +278,10 @@ export default function CatHealth() {
               {/* Cat Profile Header */}
               <div style={{ background: 'linear-gradient(135deg,#1a1d2e,#2d3154)', borderRadius: 20, padding: 28, marginBottom: 24, border: '1px solid #2d3154', position: 'relative' as const }}>
                 <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-                  <div style={{ fontSize: 72, lineHeight: 1, background: 'rgba(99,102,241,0.15)', borderRadius: 20, padding: 16, border: '2px solid rgba(99,102,241,0.3)' }}>
-                    <img src={avatarSrc(selectedCat.avatar)} width={80} height={80} alt={selectedCat.name} style={{ objectFit: 'cover' as const, borderRadius: 12 }} onError={e => { (e.target as HTMLImageElement).src = '/cat-avatars/orange.svg' }} />
+                  <div style={{ background: 'rgba(99,102,241,0.15)', borderRadius: 20, padding: 8, border: '2px solid rgba(99,102,241,0.3)', flexShrink: 0 }}>
+                    <div style={{ width: 88, height: 88, borderRadius: 14, overflow: 'hidden', background: '#0f1117' }}>
+                      <img src={avatarSrc(selectedCat.avatar)} alt={selectedCat.name} style={{ width: '100%', height: '100%', objectFit: 'cover' as const, objectPosition: 'center top', display: 'block' }} onError={e => { (e.target as HTMLImageElement).src = '/cat-avatars/orange.svg' }} />
+                    </div>
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 28, fontWeight: 800, color: 'white', marginBottom: 4 }}>{selectedCat.name}</div>
