@@ -246,6 +246,7 @@ model CatDailyLog {
   temperature Float?
   weight      Float?
   symptoms    String?
+  breathRate  Float?
   note        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -263,6 +264,12 @@ model CatVetVisit {
   bloodValues      String?
   additionalDiag   String?
   medicationChange String?
+  clinic           String?
+  doctor           String?
+  reason           String?
+  diagnosis        String?
+  treatment        String?
+  nextDate         DateTime?
   cost             Float?
   note             String?
   createdAt        DateTime @default(now())

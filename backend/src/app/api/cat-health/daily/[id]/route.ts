@@ -6,8 +6,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const user = await verifyToken(getTokenFromHeader(req.headers.get('Authorization')) || '')
   if (!user) return NextResponse.json({ success: false }, { status: 401 })
   const b = await req.json()
-  const item = await prisma.catDailyLog.update({
-    where: { id: params.id },
+  const item = await prisma.catDailyLog.updateMany({
+    where: { id: params.id, userId: user.userId },
     data: {
       logDate: b.logDate ? new Date(b.logDate) : undefined,
       foodIntake: b.food || b.foodIntake || null,
@@ -20,7 +20,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       note: b.note || null,
     },
   })
-  return NextResponse.json({ success: true, data: item })
+  return NextResponse.json({ success: true })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {

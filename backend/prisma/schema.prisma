@@ -3,20 +3,59 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+enum PhotoStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ListingStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Platform {
+  SHOPEE
+  LAZADA
+  TIKTOK_SHOP
+  WEBSITE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum WorkStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("STAFF")
-  isActive  Boolean  @default(true)
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  role         Role     @default(STAFF)
+  isActive     Boolean  @default(true)
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   photoQueues     PhotoQueue[]
   listingQueues   ListingQueue[]
   dailyLogs       DailyLog[]
@@ -37,50 +76,50 @@ model User {
 }
 
 model PhotoQueue {
-  id           String   @id @default(cuid())
+  id           String      @id @default(cuid())
   productName  String
   sku          String?
   category     String?
-  quantity     Int      @default(1)
-  receivedDate DateTime @default(now())
-  status       String   @default("PENDING")
+  quantity     Int         @default(1)
+  receivedDate DateTime    @default(now())
+  status       PhotoStatus @default(PENDING)
   note         String?
   createdBy    String
-  updatedAt    DateTime @updatedAt
-  createdAt    DateTime @default(now())
+  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime    @default(now())
   user User @relation(fields: [createdBy], references: [id])
   @@map("photo_queue")
 }
 
 model ListingQueue {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   productName String
   sku         String?
-  platform    String   @default("SHOPEE")
-  quantity    Int      @default(1)
-  status      String   @default("PENDING")
+  platform    Platform
+  quantity    Int           @default(1)
+  status      ListingStatus @default(PENDING)
   assignedTo  String?
   note        String?
   createdBy   String
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime      @default(now())
   user User @relation(fields: [createdBy], references: [id])
   @@map("listing_queue")
 }
 
 model DailyLog {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   workTitle    String
   workDetail   String?
-  workCategory String   @default("general")
-  priority     String   @default("MEDIUM")
-  status       String   @default("TODO")
+  workCategory String     @default("ทั่วไป")
+  priority     Priority   @default(MEDIUM)
+  status       WorkStatus @default(TODO)
   assignedUser String?
-  workDate     DateTime @default(now())
+  workDate     DateTime   @default(now())
   workTime     String?
   createdBy    String
-  updatedAt    DateTime @updatedAt
-  createdAt    DateTime @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime   @default(now())
   user User @relation(fields: [createdBy], references: [id])
   @@map("daily_logs")
 }
@@ -207,6 +246,7 @@ model CatDailyLog {
   temperature Float?
   weight      Float?
   symptoms    String?
+  breathRate  Float?
   note        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -224,6 +264,12 @@ model CatVetVisit {
   bloodValues      String?
   additionalDiag   String?
   medicationChange String?
+  clinic           String?
+  doctor           String?
+  reason           String?
+  diagnosis        String?
+  treatment        String?
+  nextDate         DateTime?
   cost             Float?
   note             String?
   createdAt        DateTime @default(now())
@@ -249,19 +295,19 @@ model CatVaccination {
   @@map("cat_vaccinations")
 }
 model Mortgage {
-  id            String   @id @default(cuid())
-  userId        String
-  name          String
-  bankName      String?
-  totalAmount   Float
-  monthlyPayment Float
+  id                String   @id @default(cuid())
+  userId            String
+  name              String
+  bankName          String?
+  totalAmount       Float
+  monthlyPayment    Float
   totalInstallments Int
-  paidInstallments  Int   @default(0)
-  startDate     String?
-  note          String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userId], references: [id])
+  paidInstallments  Int      @default(0)
+  startDate         String?
+  note              String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id])
   @@map("mortgages")
 }
 
