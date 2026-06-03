@@ -20,88 +20,40 @@ export default function LoginPage() {
         localStorage.setItem('tns-user', JSON.stringify(d.data.user))
         router.push('/dashboard')
       } else {
-        setError(d.error || 'EMAIL หรือ PASSWORD ไม่ถูกต้อง')
+        setError(d.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง')
       }
     } catch {
-      setError('SYSTEM ERROR: CANNOT CONNECT TO SERVER')
+      setError('ไม่สามารถเชื่อมต่อ server ได้')
     }
     setLoading(false)
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#060d0b', padding: '16px', fontFamily: '"Share Tech Mono", "Noto Sans Thai", monospace', position: 'relative', overflow: 'hidden' }}>
-
-      {/* Background grid */}
-      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(0,245,212,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,212,0.03) 1px,transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none' }} />
-
-      {/* Corner decorations */}
-      <div style={{ position: 'fixed', left: 20, top: 20, width: 30, height: 30, borderTop: '2px solid #0d4a35', borderLeft: '2px solid #0d4a35' }} />
-      <div style={{ position: 'fixed', right: 20, top: 20, width: 30, height: 30, borderTop: '2px solid #0d4a35', borderRight: '2px solid #0d4a35' }} />
-      <div style={{ position: 'fixed', left: 20, bottom: 20, width: 30, height: 30, borderBottom: '2px solid #0d4a35', borderLeft: '2px solid #0d4a35' }} />
-      <div style={{ position: 'fixed', right: 20, bottom: 20, width: 30, height: 30, borderBottom: '2px solid #0d4a35', borderRight: '2px solid #0d4a35' }} />
-
-      <div style={{ width: '100%', maxWidth: '380px', position: 'relative' }}>
-
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 56, height: 56, background: '#0a1612', border: '1px solid #0d4a35', marginBottom: 16, position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, width: 6, height: 6, borderTop: '1px solid #00f5d4', borderLeft: '1px solid #00f5d4' }} />
-            <div style={{ position: 'absolute', right: 0, top: 0, width: 6, height: 6, borderTop: '1px solid #00f5d4', borderRight: '1px solid #00f5d4' }} />
-            <div style={{ position: 'absolute', left: 0, bottom: 0, width: 6, height: 6, borderBottom: '1px solid #00f5d4', borderLeft: '1px solid #00f5d4' }} />
-            <div style={{ position: 'absolute', right: 0, bottom: 0, width: 6, height: 6, borderBottom: '1px solid #00f5d4', borderRight: '1px solid #00f5d4' }} />
-            <span style={{ fontSize: '24px', fontWeight: 800, color: '#00f5d4', textShadow: '0 0 16px rgba(0,245,212,0.9)' }}>T</span>
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#00f5d4', letterSpacing: '0.25em', textShadow: '0 0 16px rgba(0,245,212,0.7)', marginBottom: 4 }}>TNS ERP</div>
-          <div style={{ fontSize: '9px', color: '#1a5a40', letterSpacing: '0.4em' }}>COMMAND CENTER v2.0</div>
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#0f1117',padding:'16px'}}>
+      <div style={{width:'100%',maxWidth:'400px'}}>
+        <div style={{textAlign:'center',marginBottom:'32px'}}>
+          <div style={{width:'56px',height:'56px',borderRadius:'16px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',fontSize:'28px',fontWeight:'bold',color:'white'}}>T</div>
+          <h1 style={{fontSize:'24px',fontWeight:'800',color:'white',margin:'0 0 4px'}}>TNS ERP</h1>
+          <p style={{color:'#64748b',fontSize:'14px',margin:0}}>Daily Operations System</p>
         </div>
-
-        {/* Login Panel */}
-        <div style={{ background: '#0a1612', border: '1px solid #0d4a35', padding: '28px', position: 'relative', boxShadow: '0 0 30px rgba(0,245,212,0.08)' }}>
-          <div style={{ position: 'absolute', left: 0, top: 0, width: 8, height: 8, borderTop: '2px solid #00f5d4', borderLeft: '2px solid #00f5d4' }} />
-          <div style={{ position: 'absolute', right: 0, top: 0, width: 8, height: 8, borderTop: '2px solid #00f5d4', borderRight: '2px solid #00f5d4' }} />
-          <div style={{ position: 'absolute', left: 0, bottom: 0, width: 8, height: 8, borderBottom: '2px solid #00f5d4', borderLeft: '2px solid #00f5d4' }} />
-          <div style={{ position: 'absolute', right: 0, bottom: 0, width: 8, height: 8, borderBottom: '2px solid #00f5d4', borderRight: '2px solid #00f5d4' }} />
-
-          <div style={{ fontSize: '9px', color: '#1a5a40', letterSpacing: '0.2em', marginBottom: 20 }}>[ AGENT AUTHENTICATION ]</div>
-
-          <form onSubmit={login} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{background:'#1a1d2e',borderRadius:'16px',border:'1px solid #2d3154',padding:'32px'}}>
+          <form onSubmit={login} style={{display:'flex',flexDirection:'column',gap:'16px'}}>
             <div>
-              <label style={{ display: 'block', fontSize: '9px', color: '#3a6a55', letterSpacing: '0.2em', marginBottom: 6 }}>AGENT ID (EMAIL)</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="agent@tns.co.th"
-                style={{ width: '100%', padding: '10px 12px', background: '#060d0b', border: '1px solid #0d4a35', color: '#c8f0e0', fontSize: '12px', fontFamily: '"Share Tech Mono", monospace', outline: 'none', boxSizing: 'border-box' as const }}
-                onFocus={e => (e.target.style.borderColor = '#00f5d4')}
-                onBlur={e => (e.target.style.borderColor = '#0d4a35')} />
+              <label style={{display:'block',fontSize:'13px',fontWeight:'600',color:'#94a3b8',marginBottom:'6px'}}>อีเมล</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required placeholder="your@email.com"
+                style={{width:'100%',padding:'10px 14px',borderRadius:'8px',border:'1px solid #2d3154',background:'#0f1117',color:'white',fontSize:'14px',outline:'none',boxSizing:'border-box' as const}} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '9px', color: '#3a6a55', letterSpacing: '0.2em', marginBottom: 6 }}>ACCESS CODE (PASSWORD)</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
-                style={{ width: '100%', padding: '10px 12px', background: '#060d0b', border: '1px solid #0d4a35', color: '#c8f0e0', fontSize: '12px', fontFamily: '"Share Tech Mono", monospace', outline: 'none', boxSizing: 'border-box' as const }}
-                onFocus={e => (e.target.style.borderColor = '#00f5d4')}
-                onBlur={e => (e.target.style.borderColor = '#0d4a35')} />
+              <label style={{display:'block',fontSize:'13px',fontWeight:'600',color:'#94a3b8',marginBottom:'6px'}}>รหัสผ่าน</label>
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required placeholder="••••••••"
+                style={{width:'100%',padding:'10px 14px',borderRadius:'8px',border:'1px solid #2d3154',background:'#0f1117',color:'white',fontSize:'14px',outline:'none',boxSizing:'border-box' as const}} />
             </div>
-
-            {error && (
-              <div style={{ background: 'rgba(255,68,68,0.1)', border: '1px solid rgba(255,68,68,0.3)', padding: '8px 12px', fontSize: '11px', color: '#ff4444', fontFamily: '"Share Tech Mono", monospace' }}>
-                ⚠ {error}
-              </div>
-            )}
-
-            <button type="submit" disabled={loading} style={{
-              padding: '12px', background: loading ? '#0a1612' : 'rgba(0,245,212,0.1)',
-              border: `1px solid ${loading ? '#0d4a35' : '#00f5d4'}`,
-              color: loading ? '#3a6a55' : '#00f5d4',
-              fontSize: '11px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-              letterSpacing: '0.2em', fontFamily: '"Share Tech Mono", monospace',
-              textShadow: loading ? 'none' : '0 0 8px rgba(0,245,212,0.5)',
-              transition: 'all 0.15s',
-            }}>
-              {loading ? '[ AUTHENTICATING... ]' : '[ ENTER SYSTEM ]'}
+            {error && <div style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:'8px',padding:'10px 14px',color:'#f87171',fontSize:'13px'}}>{error}</div>}
+            <button type="submit" disabled={loading}
+              style={{padding:'12px',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:'10px',color:'white',fontSize:'15px',fontWeight:'700',cursor:loading?'not-allowed':'pointer',opacity:loading?0.7:1}}>
+              {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
             </button>
           </form>
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: 16, fontSize: '9px', color: '#0d2a1e', letterSpacing: '0.15em' }}>
-          TNS ERP SYSTEM © 2024 — AUTHORIZED PERSONNEL ONLY
         </div>
       </div>
     </div>

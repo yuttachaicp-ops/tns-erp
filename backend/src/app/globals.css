@@ -5,45 +5,17 @@
 :root {
   --sidebar-width: 240px;
   --header-height: 60px;
-  --px-cyan: #00f5d4;
-  --px-green: #00ff88;
-  --px-yellow: #ffd60a;
-  --px-red: #ff4444;
-  --px-bg: #060d0b;
-  --px-panel: #0a1612;
-  --px-border: #0d4a35;
-  --px-text: #c8f0e0;
-  --px-dim: #3a6a55;
 }
 
 * { box-sizing: border-box; }
 
 body {
-  font-family: 'Share Tech Mono', 'Noto Sans Thai', monospace;
-  background: var(--px-bg);
-  color: var(--px-text);
+  font-family: 'Inter', 'Noto Sans Thai', sans-serif;
+  background: #0f1117;
+  color: #e2e8f0;
 }
 
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
-  pointer-events: none;
-  z-index: 9999;
-}
-
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #060d0b; }
-::-webkit-scrollbar-thumb { background: #0d4a35; border-radius: 0; }
-::-webkit-scrollbar-thumb:hover { background: #00f5d4; }
-
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-@keyframes pulse-cyan {
-  0%,100% { box-shadow: 0 0 4px rgba(0,245,212,0.2); }
-  50% { box-shadow: 0 0 16px rgba(0,245,212,0.5), inset 0 0 8px rgba(0,245,212,0.05); }
-}
-@keyframes status-blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-
-.blink { animation: blink 1s step-end infinite; }
-.pulse { animation: pulse-cyan 2.5s ease-in-out infinite; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #1a1d27; }
+::-webkit-scrollbar-thumb { background: #3d4466; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #5a62a0; }
