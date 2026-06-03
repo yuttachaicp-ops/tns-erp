@@ -2,9 +2,11 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
+const PIXEL_MENU = [
+  { href:'/pixel-dashboard', icon:'🎮', label:'Pixel Dashboard' },
+]
 const WORK_MENU = [
   { href:'/dashboard', icon:'📊', label:'Dashboard' },
-  { href:'/pixel-dashboard', icon:'🎮', label:'Pixel Dashboard' },
   { href:'/photo-queue', icon:'📷', label:'สินค้าถ่ายรูป' },
   { href:'/listing-queue', icon:'🛒', label:'สินค้ายังไม่ได้ลงขาย' },
   { href:'/daily-logs', icon:'📝', label:'บันทึกงานประจำวัน' },
@@ -71,6 +73,8 @@ export default function Sidebar({ user, open, isMobile, onClose }: { user:{ name
         )}
       </div>
       <nav style={{padding:'8px',flex:1,overflowY:'auto'}}>
+        <Section title="Pixel Dashboard" icon="🎮" items={PIXEL_MENU} pathname={pathname} onLinkClick={isMobile?onClose:undefined} />
+        <div style={{height:'1px',background:'#2d3154',margin:'8px 4px'}} />
         <Section title="สำหรับงาน" icon="💼" items={WORK_MENU} pathname={pathname} onLinkClick={isMobile?onClose:undefined} />
         <div style={{height:'1px',background:'#2d3154',margin:'8px 4px'}} />
         <Section title="ส่วนตัว" icon="👤" items={PERSONAL_MENU} pathname={pathname} onLinkClick={isMobile?onClose:undefined} />
