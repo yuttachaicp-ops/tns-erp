@@ -20,13 +20,13 @@ interface NoBarcodeItem {
 
 const EMPTY: Partial<NoBarcodeItem> = {
   productName: '', description: '', category: '', quantity: 1,
-  sku: '', image: '', status: 'PENDING', note: '',
+  sku: '', image: '', status: 'NO_BARCODE', note: '',
 }
 
 const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
-  PENDING: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24', label: '⏳ รอติดบาร์โค้ด' },
-  LABELED: { bg: 'rgba(34,197,94,0.12)',  color: '#4ade80', label: '✅ ติดแล้ว' },
-  SKIP:    { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8', label: '⏭️ ข้าม' },
+  NO_BARCODE:  { bg: 'rgba(239,68,68,0.12)',   color: '#f87171', label: '❌ ไม่มีบาร์โค้ดในระบบ' },
+  HAS_BARCODE: { bg: 'rgba(34,197,94,0.12)',   color: '#4ade80', label: '✅ มีบาร์โค้ด' },
+  NEW_BARCODE: { bg: 'rgba(99,102,241,0.12)',  color: '#818cf8', label: '🆕 บาร์โค้ดใหม่' },
 }
 
 const CATEGORIES = [
@@ -99,9 +99,9 @@ export default function NoBarcodeePage() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Stats counts
-  const pending = items.filter(i => i.status === 'PENDING').length
-  const labeled = items.filter(i => i.status === 'LABELED').length
-  const skip    = items.filter(i => i.status === 'SKIP').length
+  const noBarcode  = items.filter(i => i.status === 'NO_BARCODE').length
+  const hasBarcode = items.filter(i => i.status === 'HAS_BARCODE').length
+  const newBarcode = items.filter(i => i.status === 'NEW_BARCODE').length
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -164,11 +164,11 @@ export default function NoBarcodeePage() {
 
         {/* Summary Cards */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-          {card('รอติดบาร์โค้ด', pending, '#fbbf24', 'rgba(251,191,36,0.07)')}
-          {card('ติดแล้ว',      labeled, '#4ade80', 'rgba(34,197,94,0.07)')}
-          {card('ข้าม',         skip,    '#94a3b8', 'rgba(148,163,184,0.07)')}
-          <div style={{ flex: 1, minWidth: 110, background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, padding: '14px 18px' }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#818cf8' }}>{total}</div>
+          {card('ไม่มีบาร์โค้ดในระบบ', noBarcode,  '#f87171', 'rgba(239,68,68,0.07)')}
+          {card('มีบาร์โค้ด',          hasBarcode, '#4ade80', 'rgba(34,197,94,0.07)')}
+          {card('บาร์โค้ดใหม่',        newBarcode, '#818cf8', 'rgba(99,102,241,0.07)')}
+          <div style={{ flex: 1, minWidth: 110, background: 'rgba(148,163,184,0.07)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 12, padding: '14px 18px' }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#94a3b8' }}>{total}</div>
             <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>ทั้งหมด</div>
           </div>
         </div>
@@ -184,9 +184,9 @@ export default function NoBarcodeePage() {
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
             style={{ padding: '10px 14px', borderRadius: 10, background: '#1a1d2e', border: '1px solid #2d3154', color: 'white', outline: 'none' }}>
             <option value="">ทุกสถานะ</option>
-            <option value="PENDING">รอติดบาร์โค้ด</option>
-            <option value="LABELED">ติดแล้ว</option>
-            <option value="SKIP">ข้าม</option>
+            <option value="NO_BARCODE">ไม่มีบาร์โค้ดในระบบ</option>
+            <option value="HAS_BARCODE">มีบาร์โค้ด</option>
+            <option value="NEW_BARCODE">บาร์โค้ดใหม่</option>
           </select>
           <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
             style={{ padding: '10px 14px', borderRadius: 10, background: '#1a1d2e', border: '1px solid #2d3154', color: 'white', outline: 'none' }}>
@@ -244,20 +244,20 @@ export default function NoBarcodeePage() {
                       <td style={{ padding: '10px 14px' }}>
                         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                           {/* Quick status */}
-                          {item.status !== 'LABELED' && (
-                            <button onClick={() => quickStatus(item.id, 'LABELED')}
-                              title="ติดบาร์โค้ดแล้ว"
+                          {item.status !== 'HAS_BARCODE' && (
+                            <button onClick={() => quickStatus(item.id, 'HAS_BARCODE')}
+                              title="มีบาร์โค้ด"
                               style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', cursor: 'pointer', fontSize: 12 }}>✅</button>
                           )}
-                          {item.status !== 'PENDING' && (
-                            <button onClick={() => quickStatus(item.id, 'PENDING')}
-                              title="คืนสถานะรอ"
-                              style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', cursor: 'pointer', fontSize: 12 }}>↩️</button>
+                          {item.status !== 'NEW_BARCODE' && (
+                            <button onClick={() => quickStatus(item.id, 'NEW_BARCODE')}
+                              title="บาร์โค้ดใหม่"
+                              style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', color: '#818cf8', cursor: 'pointer', fontSize: 12 }}>🆕</button>
                           )}
-                          {item.status !== 'SKIP' && (
-                            <button onClick={() => quickStatus(item.id, 'SKIP')}
-                              title="ข้าม"
-                              style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.2)', color: '#94a3b8', cursor: 'pointer', fontSize: 12 }}>⏭️</button>
+                          {item.status !== 'NO_BARCODE' && (
+                            <button onClick={() => quickStatus(item.id, 'NO_BARCODE')}
+                              title="ไม่มีบาร์โค้ดในระบบ"
+                              style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', cursor: 'pointer', fontSize: 12 }}>❌</button>
                           )}
                           <button onClick={() => { setEditing(item); setIsEdit(true); setModal(true) }}
                             style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', cursor: 'pointer', fontSize: 12 }}>✏️</button>
@@ -350,11 +350,11 @@ export default function NoBarcodeePage() {
           {/* สถานะ */}
           <div>
             <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>สถานะ</label>
-            <select value={editing.status || 'PENDING'} onChange={e => setEditing(p => ({ ...p, status: e.target.value }))}
+            <select value={editing.status || 'NO_BARCODE'} onChange={e => setEditing(p => ({ ...p, status: e.target.value }))}
               style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: '#0f1117', border: '1px solid #2d3154', color: 'white', outline: 'none' }}>
-              <option value="PENDING">⏳ รอติดบาร์โค้ด</option>
-              <option value="LABELED">✅ ติดบาร์โค้ดแล้ว</option>
-              <option value="SKIP">⏭️ ข้าม</option>
+              <option value="NO_BARCODE">❌ ไม่มีบาร์โค้ดในระบบ</option>
+              <option value="HAS_BARCODE">✅ มีบาร์โค้ด</option>
+              <option value="NEW_BARCODE">🆕 บาร์โค้ดใหม่</option>
             </select>
           </div>
 

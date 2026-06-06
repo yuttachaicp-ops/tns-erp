@@ -10,7 +10,7 @@ const schema = z.object({
   quantity: z.number().int().min(1).default(1),
   sku: z.string().optional(),
   image: z.string().optional(),
-  status: z.enum(['PENDING', 'LABELED', 'SKIP']).default('PENDING'),
+  status: z.enum(['NO_BARCODE', 'HAS_BARCODE', 'NEW_BARCODE']).default('NO_BARCODE'),
   note: z.string().optional(),
 })
 
