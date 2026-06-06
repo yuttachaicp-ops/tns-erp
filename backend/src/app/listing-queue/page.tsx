@@ -114,11 +114,11 @@ export default function ListingQueuePage() {
         <div style={{display:'flex',gap:'12px',marginBottom:'20px',flexWrap:'wrap'}}>
           <select value={platform} onChange={e => setPlatform(e.target.value)}
             style={{padding:'10px 14px',borderRadius:'10px',background:'#1a1d2e',border:'1px solid #2d3154',color:'white',outline:'none'}}>
-            <option value="">ทุก Platform</option>
+            <option value="">ทั้งหมด</option>
             <option value="SHOPEE">Shopee</option>
             <option value="LAZADA">Lazada</option>
-            <option value="TIKTOK_SHOP">TikTok Shop</option>
             <option value="WEBSITE">Website</option>
+            <option value="UNKNOWN">ยังไม่ทราบ</option>
           </select>
           <select value={filter} onChange={e => setFilter(e.target.value)}
             style={{padding:'10px 14px',borderRadius:'10px',background:'#1a1d2e',border:'1px solid #2d3154',color:'white',outline:'none'}}>
@@ -249,12 +249,12 @@ export default function ListingQueuePage() {
 
           <div>
             <label style={{display:'block',fontSize:'13px',color:'#94a3b8',marginBottom:'6px'}}>Platform *</label>
-            <select value={editing.platform || 'SHOPEE'} onChange={e => setEditing({...editing, platform: e.target.value})}
+            <select value={editing.platform || 'UNKNOWN'} onChange={e => setEditing({...editing, platform: e.target.value})}
               style={{width:'100%',padding:'10px 12px',borderRadius:'8px',background:'#0f1117',border:'1px solid #2d3154',color:'white',outline:'none'}}>
               <option value="SHOPEE">Shopee</option>
               <option value="LAZADA">Lazada</option>
-              <option value="TIKTOK_SHOP">TikTok Shop</option>
               <option value="WEBSITE">Website</option>
+              <option value="UNKNOWN">ยังไม่ทราบ</option>
             </select>
           </div>
           <div>

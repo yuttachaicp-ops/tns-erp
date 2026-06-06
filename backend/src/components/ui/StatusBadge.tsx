@@ -36,6 +36,7 @@ export function PlatformBadge({ platform }: { platform: string }) {
     LAZADA:     { bg:'rgba(156,39,176,0.1)', color:'#ce93d8', label:'💜 Lazada' },
     TIKTOK_SHOP:{ bg:'rgba(0,0,0,0.3)',      color:'#e0e0e0', label:'🎵 TikTok' },
     WEBSITE:    { bg:'rgba(99,102,241,0.1)', color:'#818cf8', label:'🌐 Website' },
+    UNKNOWN:    { bg:'rgba(100,116,139,0.1)',color:'#94a3b8', label:'❓ ยังไม่ทราบ' },
   }
   const p = map[platform] || { bg:'rgba(100,100,100,0.1)', color:'#888', label: platform }
   return (

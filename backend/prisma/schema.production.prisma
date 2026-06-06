@@ -30,6 +30,7 @@ enum Platform {
   LAZADA
   TIKTOK_SHOP
   WEBSITE
+  UNKNOWN
 }
 
 enum Priority {

@@ -6,7 +6,7 @@ import { z } from 'zod'
 const schema = z.object({
   productName: z.string().min(1),
   sku: z.string().optional(),
-  platform: z.enum(['SHOPEE', 'LAZADA', 'TIKTOK_SHOP', 'WEBSITE']),
+  platform: z.enum(['SHOPEE', 'LAZADA', 'TIKTOK_SHOP', 'WEBSITE', 'UNKNOWN']),
   quantity: z.number().int().min(1).default(1),
   status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).default('PENDING'),
   assignedTo: z.string().optional(),
