@@ -74,6 +74,7 @@ model User {
   pipelineIssues  PipelineIssue[]
   savingsGoals    SavingsGoal[]
   carLoans        CarLoan[]
+  noBarcodes      NoBarcode[]
   @@map("users")
 }
 
@@ -358,4 +359,21 @@ model PipelineIssue {
   updatedAt   DateTime  @updatedAt
   user        User      @relation(fields: [userId], references: [id])
   @@map("pipeline_issues")
+}
+
+model NoBarcode {
+  id          String   @id @default(cuid())
+  productName String
+  description String?
+  category    String?
+  quantity    Int      @default(1)
+  sku         String?
+  image       String?
+  status      String   @default("PENDING")
+  note        String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [createdBy], references: [id])
+  @@map("no_barcodes")
 }
