@@ -11,6 +11,7 @@ const schema = z.object({
   status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).default('PENDING'),
   assignedTo: z.string().optional(),
   note: z.string().optional(),
+  image: z.string().optional(),
 })
 
 export async function GET(req: NextRequest) {
