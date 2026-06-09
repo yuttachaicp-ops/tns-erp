@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 const PIXEL_MENU = [
   { href:'/pixel-dashboard', icon:'🎮', label:'Pixel Dashboard' },
+  { href:'/claude-status', icon:'🤖', label:'Claude Status' },
 ]
 const WORK_MENU = [
   { href:'/dashboard', icon:'📊', label:'Dashboard' },
