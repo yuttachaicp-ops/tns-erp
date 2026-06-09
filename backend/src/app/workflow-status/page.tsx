@@ -78,7 +78,7 @@ function timeAgo(dateStr: string) {
 
 // ====== Component ======
 export default function WorkflowStatusPage() {
-  const [n8nUrl, setN8nUrl]       = useState('http://localhost:5678')
+  const [n8nUrl, setN8nUrl]       = useState('https://animating-hundredth-starship.ngrok-free.dev')
   const [apiKey, setApiKey]       = useState('')
   const [showSettings, setShowSettings] = useState(false)
   const [wfNames, setWfNames]     = useState<Record<string, string>>({})
@@ -111,7 +111,7 @@ export default function WorkflowStatusPage() {
       const key    = localStorage.getItem(STORAGE_KEY) || ''
       const res    = await fetch(
         `${url}/api/v1/executions?workflowId=${wfId}&limit=10&includeData=false`,
-        { headers: { 'X-N8N-API-KEY': key, 'Accept': 'application/json' } }
+        { headers: { 'X-N8N-API-KEY': key, 'Accept': 'application/json', 'ngrok-skip-browser-warning': 'true' } }
       )
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data   = await res.json()
@@ -181,7 +181,7 @@ export default function WorkflowStatusPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>n8n URL</label>
                 <input value={n8nUrl} onChange={e => setN8nUrl(e.target.value)}
-                  placeholder="http://localhost:5678"
+                  placeholder="https://xxx.ngrok-free.app หรือ http://localhost:5678"
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, background: '#0f1117', border: '1px solid #2d3154', color: 'white', outline: 'none', boxSizing: 'border-box', fontSize: 13 }} />
               </div>
               <div>
