@@ -44,7 +44,7 @@ const STATUS_TH: Record<string, string> = {
 }
 
 // แปลวลีที่พบบ่อยใน body ข้อความของ Claude Status
-const PHRASE_MAP: [RegExp, string][] = [
+const PHRASE_MAP: [RegExp, string | ((m: string) => string)][] = [
   [/we are currently investigating this issue\.?/gi,       'กำลังตรวจสอบปัญหาที่เกิดขึ้นอยู่'],
   [/we are investigating (elevated )?errors? on/gi,        'กำลังตรวจสอบข้อผิดพลาดที่เพิ่มขึ้นใน'],
   [/we will provide an update as soon as possible\.?/gi,   'จะอัพเดทข้อมูลโดยเร็วที่สุด'],
@@ -84,11 +84,8 @@ const PHRASE_MAP: [RegExp, string][] = [
 function translateBody(text: string): string {
   let result = text
   for (const [pattern, replacement] of PHRASE_MAP) {
-    if (typeof replacement === 'string') {
-      result = result.replace(pattern, replacement)
-    } else {
-      result = result.replace(pattern, replacement as (m: string) => string)
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    result = result.replace(pattern, replacement as any)
   }
   return result
 }
