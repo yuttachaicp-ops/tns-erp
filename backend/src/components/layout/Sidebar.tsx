@@ -5,6 +5,7 @@ import { useState } from 'react'
 const PIXEL_MENU = [
   { href:'/pixel-dashboard', icon:'🎮', label:'Pixel Dashboard' },
   { href:'/claude-status', icon:'🤖', label:'Claude Status' },
+  { href:'/workflow-status', icon:'⚡', label:'Workflow Status' },
 ]
 const WORK_MENU = [
   { href:'/dashboard', icon:'📊', label:'Dashboard' },
