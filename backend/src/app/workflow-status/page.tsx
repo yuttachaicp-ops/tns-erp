@@ -105,7 +105,7 @@ export default function WorkflowStatusPage() {
   }
 
   const fetchWorkflow = useCallback(async (wfId: string) => {
-    setStates(prev => ({ ...prev, [wfId]: { ...prev[wfId], loading: true, error: '' } }))
+    setStates(prev => ({ ...prev, [wfId]: { executions: prev[wfId]?.executions || [], loading: true, error: '' } }))
     try {
       const url    = localStorage.getItem(STORAGE_URL) || 'http://localhost:5678'
       const key    = localStorage.getItem(STORAGE_KEY) || ''
@@ -141,7 +141,7 @@ export default function WorkflowStatusPage() {
   const getWfName = (wf: typeof WORKFLOWS[0]) => wfNames[wf.id] || wf.name
 
   // Stats across all workflows
-  const allExecs = Object.values(states).flatMap(s => s.executions)
+  const allExecs = Object.values(states).flatMap(s => s.executions || [])
   const totalSuccess = allExecs.filter(e => e.status === 'success').length
   const totalError   = allExecs.filter(e => e.status === 'error').length
   const totalRunning = allExecs.filter(e => e.status === 'running').length
