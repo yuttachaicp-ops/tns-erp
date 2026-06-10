@@ -55,55 +55,63 @@ export async function POST(req: NextRequest) {
     } = await req.json()
 
     const { importBatch, orders } = body
-    let created = 0
-    let updated = 0
+    const orderNumbers = orders.map(o => o.orderNumber)
 
-    for (const o of orders) {
-      const existing = await prisma.delayedOrder.findUnique({
-        where: { orderNumber: o.orderNumber },
+    // 1 query to find all existing orders at once
+    const existing = await prisma.delayedOrder.findMany({
+      where: { orderNumber: { in: orderNumbers } },
+      select: { orderNumber: true, trackingNumber: true, shipByDate: true, orderDate: true },
+    })
+    const existingMap = new Map(existing.map(e => [e.orderNumber, e]))
+
+    const toCreate = orders.filter(o => !existingMap.has(o.orderNumber))
+    const toUpdate = orders.filter(o =>  existingMap.has(o.orderNumber))
+
+    // Batch create new orders with items (parallel)
+    const createOps = toCreate.map(o =>
+      prisma.delayedOrder.create({
+        data: {
+          orderNumber:    o.orderNumber,
+          platform:       o.platform,
+          orderStatus:    o.orderStatus,
+          buyerName:      o.buyerName,
+          trackingNumber: o.trackingNumber,
+          shipByDate:     o.shipByDate ? new Date(o.shipByDate) : null,
+          orderDate:      o.orderDate  ? new Date(o.orderDate)  : null,
+          importBatch,
+          status: 'PENDING',
+          items: {
+            create: o.items.map(item => ({
+              productName: item.productName,
+              sku:         item.sku,
+              variantName: item.variantName,
+              quantity:    item.quantity,
+            })),
+          },
+        },
       })
+    )
 
-      if (existing) {
-        // Update metadata from Excel but don't change status if already PACKED/SHIPPED
-        await prisma.delayedOrder.update({
-          where: { orderNumber: o.orderNumber },
-          data: {
-            orderStatus:   o.orderStatus,
-            buyerName:     o.buyerName,
-            trackingNumber: o.trackingNumber || existing.trackingNumber,
-            shipByDate:    o.shipByDate ? new Date(o.shipByDate) : existing.shipByDate,
-            orderDate:     o.orderDate  ? new Date(o.orderDate)  : existing.orderDate,
-            importBatch,
-          },
-        })
-        updated++
-      } else {
-        await prisma.delayedOrder.create({
-          data: {
-            orderNumber:   o.orderNumber,
-            platform:      o.platform,
-            orderStatus:   o.orderStatus,
-            buyerName:     o.buyerName,
-            trackingNumber: o.trackingNumber,
-            shipByDate:    o.shipByDate ? new Date(o.shipByDate) : null,
-            orderDate:     o.orderDate  ? new Date(o.orderDate)  : null,
-            importBatch,
-            status: 'PENDING',
-            items: {
-              create: o.items.map(item => ({
-                productName: item.productName,
-                sku:         item.sku,
-                variantName: item.variantName,
-                quantity:    item.quantity,
-              })),
-            },
-          },
-        })
-        created++
-      }
-    }
+    // Batch update existing (parallel)
+    const updateOps = toUpdate.map(o => {
+      const prev = existingMap.get(o.orderNumber)!
+      return prisma.delayedOrder.update({
+        where: { orderNumber: o.orderNumber },
+        data: {
+          orderStatus:    o.orderStatus,
+          buyerName:      o.buyerName,
+          trackingNumber: o.trackingNumber || prev.trackingNumber,
+          shipByDate:     o.shipByDate ? new Date(o.shipByDate) : prev.shipByDate,
+          orderDate:      o.orderDate  ? new Date(o.orderDate)  : prev.orderDate,
+          importBatch,
+        },
+      })
+    })
 
-    return successResponse({ created, updated, total: orders.length })
+    // Run all in parallel inside a transaction
+    await prisma.$transaction([...createOps, ...updateOps])
+
+    return successResponse({ created: toCreate.length, updated: toUpdate.length, total: orders.length })
   } catch (e) {
     console.error(e)
     return errorResponse('เกิดข้อผิดพลาดในการนำเข้าข้อมูล', 500)

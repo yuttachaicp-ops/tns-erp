@@ -147,7 +147,15 @@ export default function DelayedOrdersPage() {
     }
   }, [token])
 
-  useEffect(() => { fetchOrders() }, [fetchOrders])
+  useEffect(() => {
+    fetchOrders()
+    // Preload SheetJS in background so it's ready when user uploads
+    if (!(window as unknown as Record<string, unknown>).XLSX) {
+      const s = document.createElement('script')
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+      document.head.appendChild(s)
+    }
+  }, [fetchOrders])
 
   /* ── Load SheetJS from CDN, parse Excel ── */
   async function loadXLSX() {
