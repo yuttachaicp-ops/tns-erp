@@ -476,6 +476,7 @@ export default function DelayedOrdersPage() {
             <span style={{ fontSize: 12 }}>อัปโหลด Excel เพื่อนำเข้าคำสั่งซื้อ</span>
           </div>
         ) : (
+          <>
           {/* ── Bulk action bar ── */}
           {selected.size > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 10, marginBottom: 8 }}>
@@ -668,6 +669,7 @@ export default function DelayedOrdersPage() {
               )
             })}
           </div>
+          </>
         )}
       </div>
     </AppShell>
