@@ -392,6 +392,7 @@ model DelayedOrder {
   id             String             @id @default(cuid())
   orderNumber    String             @unique
   platform       String             @default("SHOPEE")
+  shop           String             @default("")
   orderStatus    String
   buyerName      String?
   trackingNumber String?

@@ -10,12 +10,21 @@ interface OrderItem {
   isOutOfStock: boolean; expectedArrival: string | null; note: string | null
 }
 interface DelayedOrder {
-  id: string; orderNumber: string; platform: string
+  id: string; orderNumber: string; platform: string; shop: string
   orderStatus: string; buyerName: string | null
   trackingNumber: string | null; shipByDate: string | null
   orderDate: string | null; importBatch: string | null
   status: string; note: string | null; items: OrderItem[]
 }
+
+/* ────────── Shop config ────────── */
+const SHOPS = [
+  { key: 'THUN_SHOPEE',    platform: 'SHOPEE', label: 'ธันไฟฟ้า thunonline',  icon: '🧡', color: '#fb923c', bg: 'rgba(251,146,60,0.15)',  border: '#fb923c40' },
+  { key: 'THUN_LAZADA',    platform: 'LAZADA', label: 'ธันไฟฟ้า thunonline',  icon: '💜', color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', border: '#a78bfa40' },
+  { key: 'SUNTREE_SHOPEE', platform: 'SHOPEE', label: 'Suntree Electric',      icon: '🧡', color: '#fb923c', bg: 'rgba(251,146,60,0.15)',  border: '#fb923c40' },
+  { key: 'SUNTREE_LAZADA', platform: 'LAZADA', label: 'Suntree Electric',      icon: '💜', color: '#a78bfa', bg: 'rgba(167,139,250,0.15)', border: '#a78bfa40' },
+]
+function getShop(key: string) { return SHOPS.find(s => s.key === key) || SHOPS[0] }
 interface CountEntry { status: string; _count: { id: number } }
 
 /* ────────── Urgency ────────── */
@@ -155,11 +164,13 @@ export default function DelayedOrdersPage() {
   const [counts,   setCounts]   = useState<CountEntry[]>([])
   const [loading,  setLoading]  = useState(true)
   const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState<{ created: number; updated: number } | null>(null)
+  const [importResult, setImportResult] = useState<{ created: number; updated: number; shop: string } | null>(null)
   const [dragOver, setDragOver] = useState(false)
+  const [selectedShop, setSelectedShop] = useState<string>('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
   const [filterUrgency, setFilterUrgency] = useState<string>('ALL')
+  const [filterShop, setFilterShop] = useState<string>('ALL')
   const [editingItem, setEditingItem] = useState<{ id: string; field: string; value: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -223,11 +234,11 @@ export default function DelayedOrdersPage() {
       const res = await fetch('/api/delayed-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ importBatch: today, orders: parsed }),
+        body: JSON.stringify({ importBatch: today, shop: selectedShop, orders: parsed }),
       })
       const data = await res.json()
       if (data.success) {
-        setImportResult(data.data)
+        setImportResult({ ...data.data, shop: selectedShop })
         await fetchOrders()
       }
     } catch (e) {
@@ -274,7 +285,8 @@ export default function DelayedOrdersPage() {
   counts.forEach(c => { countMap[c.status] = c._count.id })
 
   const filtered = orders.filter(o => {
-    if (filterStatus !== 'ALL' && o.status !== filterStatus) return false
+    if (filterStatus  !== 'ALL' && o.status !== filterStatus) return false
+    if (filterShop    !== 'ALL' && o.shop   !== filterShop)   return false
     if (filterUrgency !== 'ALL') {
       const u = getUrgency(o.shipByDate, o.orderStatus)
       if (filterUrgency === 'OVERDUE'   && u.rank !== 0) return false
@@ -295,35 +307,70 @@ export default function DelayedOrdersPage() {
       <Header title="📦 คำสั่งซื้อที่ล้าช้า" subtitle="ติดตามคำสั่งซื้อที่รอจัดส่งและเกินกำหนด" />
       <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+        {/* ── Shop Selector ── */}
+        <div>
+          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>เลือกร้านก่อนอัปโหลด Excel</div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {SHOPS.map(shop => (
+              <button key={shop.key} onClick={() => setSelectedShop(selectedShop === shop.key ? '' : shop.key)}
+                style={{
+                  padding: '10px 18px', borderRadius: 10, border: `2px solid ${selectedShop === shop.key ? shop.color : '#2d3154'}`,
+                  cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
+                  background: selectedShop === shop.key ? shop.bg : '#1a1d2e',
+                  color: selectedShop === shop.key ? shop.color : '#64748b',
+                  display: 'flex', alignItems: 'center', gap: 8,
+                }}>
+                <span style={{ fontSize: 16 }}>{shop.icon}</span>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 10, opacity: 0.7 }}>{shop.platform}</div>
+                  <div>{shop.label}</div>
+                </div>
+                {selectedShop === shop.key && <span style={{ fontSize: 14 }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* ── Upload Zone ── */}
         <div
-          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragOver={e => { e.preventDefault(); if (selectedShop) setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
-          onClick={() => fileInputRef.current?.click()}
+          onDrop={e => { e.preventDefault(); setDragOver(false); if (!selectedShop) { alert('กรุณาเลือกร้านก่อนอัปโหลด'); return; } const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
+          onClick={() => { if (!selectedShop) { alert('กรุณาเลือกร้านก่อนอัปโหลด'); return; } fileInputRef.current?.click() }}
           style={{
-            border: `2px dashed ${dragOver ? '#6366f1' : '#2d3154'}`,
+            border: `2px dashed ${!selectedShop ? '#1e2235' : dragOver ? '#6366f1' : '#2d3154'}`,
             borderRadius: 12, padding: '24px 20px', textAlign: 'center',
-            cursor: 'pointer', background: dragOver ? 'rgba(99,102,241,0.08)' : '#1a1d2e',
+            cursor: selectedShop ? 'pointer' : 'not-allowed',
+            background: dragOver ? 'rgba(99,102,241,0.08)' : '#1a1d2e',
+            opacity: selectedShop ? 1 : 0.5,
             transition: 'all 0.2s',
           }}
         >
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }}
             onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = '' }} />
           {importing ? (
-            <div style={{ color: '#818cf8' }}>⏳ กำลังนำเข้าข้อมูล...</div>
+            <div style={{ color: '#818cf8' }}>
+              ⏳ กำลังนำเข้าข้อมูล {selectedShop ? `(${getShop(selectedShop).label})` : ''}...
+            </div>
           ) : (
             <>
               <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
-              <div style={{ color: '#94a3b8', fontSize: 14 }}>ลาก-วาง หรือคลิกเพื่ออัปโหลด Excel (Shopee/Lazada)</div>
-              <div style={{ color: '#4a5568', fontSize: 12, marginTop: 4 }}>นำเข้าเฉพาะรายการ: ที่ต้องจัดส่ง, การจัดส่ง</div>
+              {selectedShop ? (
+                <div style={{ color: getShop(selectedShop).color, fontSize: 14, fontWeight: 600 }}>
+                  {getShop(selectedShop).icon} {getShop(selectedShop).platform} · {getShop(selectedShop).label}
+                </div>
+              ) : (
+                <div style={{ color: '#4a5568', fontSize: 14 }}>← เลือกร้านก่อน</div>
+              )}
+              <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>ลาก-วาง หรือคลิกเพื่ออัปโหลด Excel</div>
+              <div style={{ color: '#4a5568', fontSize: 11, marginTop: 2 }}>นำเข้าเฉพาะ: ที่ต้องจัดส่ง, การจัดส่ง, ready_to_ship</div>
             </>
           )}
         </div>
 
         {importResult && (
           <div style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 10, padding: '12px 16px', color: '#4ade80', fontSize: 13 }}>
-            ✅ นำเข้าสำเร็จ — สร้างใหม่ {importResult.created} รายการ | อัพเดท {importResult.updated} รายการ
+            ✅ นำเข้าสำเร็จ {importResult.shop ? `(${getShop(importResult.shop).icon} ${getShop(importResult.shop).label})` : ''} — สร้างใหม่ {importResult.created} รายการ | อัพเดท {importResult.updated} รายการ
           </div>
         )}
 
@@ -344,30 +391,51 @@ export default function DelayedOrdersPage() {
         </div>
 
         {/* ── Filters ── */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: '#64748b', marginRight: 4 }}>สถานะ:</span>
-          {['ALL', 'PENDING', 'PACKED', 'SHIPPED'].map(s => (
-            <button key={s} onClick={() => setFilterStatus(s)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Shop filter */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: '#64748b', marginRight: 4 }}>ร้าน:</span>
+            <button onClick={() => setFilterShop('ALL')}
               style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12,
-                background: filterStatus === s ? '#6366f1' : '#2d3154',
-                color: filterStatus === s ? 'white' : '#94a3b8' }}>
-              {s === 'ALL' ? 'ทั้งหมด' : STATUS_LABEL[s]?.label || s}
+                background: filterShop === 'ALL' ? '#6366f1' : '#2d3154',
+                color: filterShop === 'ALL' ? 'white' : '#94a3b8' }}>
+              ทั้งหมด
             </button>
-          ))}
-          <span style={{ fontSize: 12, color: '#64748b', marginLeft: 8, marginRight: 4 }}>ความเร่งด่วน:</span>
-          {[
-            { key: 'ALL', label: 'ทั้งหมด' },
-            { key: 'OVERDUE', label: '🔴 เกินกำหนด' },
-            { key: 'TODAY', label: '🟠 วันนี้' },
-            { key: 'TOMORROW', label: '🟡 พรุ่งนี้' },
-          ].map(f => (
-            <button key={f.key} onClick={() => setFilterUrgency(f.key)}
-              style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12,
-                background: filterUrgency === f.key ? '#6366f1' : '#2d3154',
-                color: filterUrgency === f.key ? 'white' : '#94a3b8' }}>
-              {f.label}
-            </button>
-          ))}
+            {SHOPS.map(shop => (
+              <button key={shop.key} onClick={() => setFilterShop(filterShop === shop.key ? 'ALL' : shop.key)}
+                style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${filterShop === shop.key ? shop.color : 'transparent'}`, cursor: 'pointer', fontSize: 12,
+                  background: filterShop === shop.key ? shop.bg : '#2d3154',
+                  color: filterShop === shop.key ? shop.color : '#94a3b8' }}>
+                {shop.icon} {shop.platform === 'SHOPEE' ? 'Shopee' : 'Lazada'} · {shop.label}
+              </button>
+            ))}
+          </div>
+          {/* Status + urgency filter */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: '#64748b', marginRight: 4 }}>สถานะ:</span>
+            {['ALL', 'PENDING', 'PACKED', 'SHIPPED'].map(s => (
+              <button key={s} onClick={() => setFilterStatus(s)}
+                style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12,
+                  background: filterStatus === s ? '#6366f1' : '#2d3154',
+                  color: filterStatus === s ? 'white' : '#94a3b8' }}>
+                {s === 'ALL' ? 'ทั้งหมด' : STATUS_LABEL[s]?.label || s}
+              </button>
+            ))}
+            <span style={{ fontSize: 12, color: '#64748b', marginLeft: 8, marginRight: 4 }}>ความเร่งด่วน:</span>
+            {[
+              { key: 'ALL', label: 'ทั้งหมด' },
+              { key: 'OVERDUE', label: '🔴 เกินกำหนด' },
+              { key: 'TODAY', label: '🟠 วันนี้' },
+              { key: 'TOMORROW', label: '🟡 พรุ่งนี้' },
+            ].map(f => (
+              <button key={f.key} onClick={() => setFilterUrgency(f.key)}
+                style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12,
+                  background: filterUrgency === f.key ? '#6366f1' : '#2d3154',
+                  color: filterUrgency === f.key ? 'white' : '#94a3b8' }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ── Table ── */}
@@ -410,14 +478,19 @@ export default function DelayedOrdersPage() {
                     </div>
                     {/* Order number */}
                     <div>
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
-                        background: order.platform === 'SHOPEE' ? 'rgba(251,146,60,0.15)' : 'rgba(167,139,250,0.15)',
-                        color: order.platform === 'SHOPEE' ? '#fb923c' : '#a78bfa',
-                        border: `1px solid ${order.platform === 'SHOPEE' ? '#fb923c40' : '#a78bfa40'}`,
-                      }}>
-                        {order.platform === 'SHOPEE' ? '🧡 Shopee' : '💜 Lazada'}
-                      </span>
+                      {/* Shop badge */}
+                      {(() => {
+                        const sh = getShop(order.shop)
+                        return (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
+                            background: sh.bg, color: sh.color, border: `1px solid ${sh.border}`,
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                          }}>
+                            {sh.icon} {sh.platform} · {sh.label || (order.platform === 'SHOPEE' ? 'Shopee' : 'Lazada')}
+                          </span>
+                        )
+                      })()}
                       <div style={{ fontSize: 13, color: 'white', fontWeight: 700, fontFamily: 'monospace', marginTop: 4, letterSpacing: '0.02em' }}>{order.orderNumber}</div>
                       <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{order.buyerName || '—'}</div>
                       <div style={{ fontSize: 10, color: '#4a5568' }}>{order.orderStatus}</div>

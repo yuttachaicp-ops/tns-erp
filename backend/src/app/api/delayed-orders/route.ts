@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
   try {
     const body: {
       importBatch: string
+      shop: string
       orders: Array<{
         orderNumber: string
         platform: string
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
       }>
     } = await req.json()
 
-    const { importBatch, orders } = body
+    const { importBatch, shop, orders } = body
     const orderNumbers = orders.map(o => o.orderNumber)
 
     // 1 query to find all existing orders at once
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
         data: {
           orderNumber:    o.orderNumber,
           platform:       o.platform,
+          shop:           shop || '',
           orderStatus:    o.orderStatus,
           buyerName:      o.buyerName,
           trackingNumber: o.trackingNumber,
@@ -98,6 +100,7 @@ export async function POST(req: NextRequest) {
       return prisma.delayedOrder.update({
         where: { orderNumber: o.orderNumber },
         data: {
+          shop:           shop || '',
           orderStatus:    o.orderStatus,
           buyerName:      o.buyerName,
           trackingNumber: o.trackingNumber || prev.trackingNumber,
