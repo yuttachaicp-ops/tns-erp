@@ -293,7 +293,11 @@ export default function DelayedOrdersPage() {
         return
       }
 
-      // ORDER_IMPORT flow (Shopee/Lazada)
+      // ORDER_IMPORT flow (Shopee/Lazada) — must select shop
+      if (!selectedShop) {
+        alert('ไฟล์ Shopee/Lazada กรุณาเลือกร้านก่อนอัปโหลด')
+        return
+      }
       if (parsed.orders.length === 0) {
         alert('ไม่พบคำสั่งซื้อที่รอดำเนินการในไฟล์นี้\n(รองรับเฉพาะ: ที่ต้องจัดส่ง, การจัดส่ง, ready_to_ship)')
         return
@@ -402,16 +406,14 @@ export default function DelayedOrdersPage() {
 
         {/* ── Upload Zone ── */}
         <div
-          onDragOver={e => { e.preventDefault(); if (selectedShop) setDragOver(true) }}
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
-          onDrop={e => { e.preventDefault(); setDragOver(false); if (!selectedShop) { alert('กรุณาเลือกร้านก่อนอัปโหลด'); return; } const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
-          onClick={() => { if (!selectedShop) { alert('กรุณาเลือกร้านก่อนอัปโหลด'); return; } fileInputRef.current?.click() }}
+          onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }}
+          onClick={() => fileInputRef.current?.click()}
           style={{
-            border: `2px dashed ${!selectedShop ? '#1e2235' : dragOver ? '#6366f1' : '#2d3154'}`,
+            border: `2px dashed ${dragOver ? '#6366f1' : '#2d3154'}`,
             borderRadius: 12, padding: '24px 20px', textAlign: 'center',
-            cursor: selectedShop ? 'pointer' : 'not-allowed',
-            background: dragOver ? 'rgba(99,102,241,0.08)' : '#1a1d2e',
-            opacity: selectedShop ? 1 : 0.5,
+            cursor: 'pointer', background: dragOver ? 'rgba(99,102,241,0.08)' : '#1a1d2e',
             transition: 'all 0.2s',
           }}
         >
@@ -424,15 +426,18 @@ export default function DelayedOrdersPage() {
           ) : (
             <>
               <div style={{ fontSize: 32, marginBottom: 8 }}>📂</div>
-              {selectedShop ? (
-                <div style={{ color: getShop(selectedShop).color, fontSize: 14, fontWeight: 600 }}>
-                  {getShop(selectedShop).icon} {getShop(selectedShop).platform} · {getShop(selectedShop).label}
+              <div style={{ color: '#94a3b8', fontSize: 14, fontWeight: 600 }}>ลาก-วาง หรือคลิกเพื่ออัปโหลด Excel</div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, color: '#fb923c', background: 'rgba(251,146,60,0.1)', padding: '2px 8px', borderRadius: 5 }}>🧡 Shopee Export</span>
+                <span style={{ fontSize: 11, color: '#a78bfa', background: 'rgba(167,139,250,0.1)', padding: '2px 8px', borderRadius: 5 }}>💜 Lazada Export</span>
+                <span style={{ fontSize: 11, color: '#34d399', background: 'rgba(52,211,153,0.1)', padding: '2px 8px', borderRadius: 5 }}>📦 Video Record (dobybot)</span>
+              </div>
+              {selectedShop && (
+                <div style={{ color: getShop(selectedShop).color, fontSize: 12, marginTop: 6 }}>
+                  ร้านที่เลือก: {getShop(selectedShop).icon} {getShop(selectedShop).label}
                 </div>
-              ) : (
-                <div style={{ color: '#4a5568', fontSize: 14 }}>← เลือกร้านก่อน</div>
               )}
-              <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>ลาก-วาง หรือคลิกเพื่ออัปโหลด Excel</div>
-              <div style={{ color: '#4a5568', fontSize: 11, marginTop: 2 }}>รองรับ: Shopee Export · Lazada Export · Video Record Report (dobybot)</div>
+              <div style={{ color: '#4a5568', fontSize: 11, marginTop: 4 }}>dobybot ไม่ต้องเลือกร้าน — match อัตโนมัติจากเลขออร์เดอร์</div>
             </>
           )}
         </div>
