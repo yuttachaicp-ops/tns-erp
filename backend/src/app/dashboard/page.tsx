@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import Header from '@/components/layout/Header'
 
@@ -10,6 +11,15 @@ interface DashboardData {
     todayLogs: number; pendingLogs: number
   }
   recentActivities: Array<{ id: string; action: string; module: string; detail: string; createdAt: string; user: { name: string } }>
+}
+
+interface PlatformPricing {
+  id: string; platform: string; multiplier: number; note: string | null
+}
+
+const PLATFORM_META: Record<string, { label: string; icon: string; color: string; bg: string }> = {
+  SHOPEE: { label: 'Shopee', icon: '🧡', color: '#fb923c', bg: 'rgba(251,146,60,0.08)' },
+  LAZADA: { label: 'Lazada', icon: '💜', color: '#a78bfa', bg: 'rgba(167,139,250,0.08)' },
 }
 
 function KPICard({ icon, label, value, sub, color }: { icon: string; label: string; value: number; sub: string; color: string }) {
@@ -27,15 +37,19 @@ function KPICard({ icon, label, value, sub, color }: { icon: string; label: stri
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null)
+  const [data, setData]       = useState<DashboardData | null>(null)
+  const [pricing, setPricing] = useState<PlatformPricing[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const token = localStorage.getItem('tns-token')
-    fetch('/api/dashboard', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (d.success) setData(d.data) })
-      .finally(() => setLoading(false))
+    Promise.all([
+      fetch('/api/dashboard', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch('/api/platform-pricing', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    ]).then(([dash, price]) => {
+      if (dash.success)   setData(dash.data)
+      if (price.success)  setPricing(price.data)
+    }).finally(() => setLoading(false))
   }, [])
 
   const s = data?.summary
@@ -50,11 +64,36 @@ export default function DashboardPage() {
           <>
             {/* KPI Grid */}
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'16px',marginBottom:'24px'}}>
-              <KPICard icon="📷" label="สินค้ารอถ่ายรูป" value={s?.photoQueuePending||0} sub={`ทั้งหมด ${s?.photoQueueTotal||0} รายการ`} color="#fbbf24" />
-              <KPICard icon="🛒" label="สินค้ายังไม่ลงขาย" value={s?.listingQueuePending||0} sub={`ทั้งหมด ${s?.listingQueueTotal||0} รายการ`} color="#f87171" />
-              <KPICard icon="📝" label="งานวันนี้" value={s?.todayLogs||0} sub="บันทึกวันนี้" color="#4ade80" />
-              <KPICard icon="⏰" label="งานค้าง" value={s?.pendingLogs||0} sub="รอดำเนินการ" color="#818cf8" />
+              <KPICard icon="📷" label="สินค้ารอถ่ายรูป"    value={s?.photoQueuePending||0}   sub={`ทั้งหมด ${s?.photoQueueTotal||0} รายการ`}   color="#fbbf24" />
+              <KPICard icon="🛒" label="สินค้ายังไม่ลงขาย"  value={s?.listingQueuePending||0} sub={`ทั้งหมด ${s?.listingQueueTotal||0} รายการ`} color="#f87171" />
+              <KPICard icon="📝" label="งานวันนี้"           value={s?.todayLogs||0}           sub="บันทึกวันนี้"                                  color="#4ade80" />
+              <KPICard icon="⏰" label="งานค้าง"             value={s?.pendingLogs||0}         sub="รอดำเนินการ"                                   color="#818cf8" />
             </div>
+
+            {/* Platform Pricing */}
+            {pricing.length > 0 && (
+              <div style={{marginBottom:'24px'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+                  <h3 style={{margin:0,fontSize:'15px',fontWeight:'700',color:'white'}}>💰 ตัวคูณราคาแพลตฟอร์ม</h3>
+                  <Link href="/platform-pricing" style={{fontSize:12,color:'#6366f1',textDecoration:'none'}}>แก้ไข →</Link>
+                </div>
+                <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+                  {pricing.map(p => {
+                    const meta = PLATFORM_META[p.platform] || { label: p.platform, icon: '🛒', color: '#818cf8', bg: 'rgba(99,102,241,0.08)' }
+                    return (
+                      <div key={p.id} style={{background: meta.bg, border:`1px solid ${meta.color}30`, borderRadius:12, padding:'14px 20px', display:'flex', alignItems:'center', gap:14, minWidth:180}}>
+                        <span style={{fontSize:22}}>{meta.icon}</span>
+                        <div>
+                          <div style={{fontSize:13,color:'#94a3b8'}}>{meta.label}</div>
+                          <div style={{fontSize:22,fontWeight:800,color:meta.color}}>×{p.multiplier}</div>
+                          {p.note && <div style={{fontSize:11,color:'#4a5568',marginTop:2}}>{p.note}</div>}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Recent Activity */}
             <div style={{background:'#1a1d2e',borderRadius:'14px',border:'1px solid #2d3154',padding:'20px'}}>
