@@ -2,6 +2,19 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser, successResponse, errorResponse } from '@/lib/api-helpers'
 
+// DELETE /api/delayed-orders  – bulk delete
+export async function DELETE(req: NextRequest) {
+  const session = await getAuthUser(req)
+  if (!session) return errorResponse('Unauthorized', 401)
+  try {
+    const { ids }: { ids: string[] } = await req.json()
+    const result = await prisma.delayedOrder.deleteMany({ where: { id: { in: ids } } })
+    return successResponse({ deleted: result.count })
+  } catch {
+    return errorResponse('เกิดข้อผิดพลาด', 500)
+  }
+}
+
 // GET /api/delayed-orders?status=PENDING&batch=2026-06-10
 export async function GET(req: NextRequest) {
   const session = await getAuthUser(req)

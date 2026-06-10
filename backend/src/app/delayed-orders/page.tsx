@@ -171,6 +171,8 @@ export default function DelayedOrdersPage() {
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
   const [filterUrgency, setFilterUrgency] = useState<string>('ALL')
   const [filterShop, setFilterShop] = useState<string>('ALL')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
   const [editingItem, setEditingItem] = useState<{ id: string; field: string; value: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -199,6 +201,33 @@ export default function DelayedOrdersPage() {
       document.head.appendChild(s)
     }
   }, [fetchOrders])
+
+  function toggleSelect(id: string) {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function toggleSelectAll() {
+    if (selected.size === filtered.length && filtered.length > 0) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(filtered.map(o => o.id)))
+    }
+  }
+  async function deleteSelected() {
+    if (selected.size === 0) return
+    if (!confirm(`ลบ ${selected.size} รายการที่เลือกทั้งหมด?`)) return
+    setDeleting(true)
+    try {
+      await fetch('/api/delayed-orders', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: [...selected] }),
+      })
+      setSelected(new Set())
+      await fetchOrders()
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   /* ── Load SheetJS from CDN, parse Excel ── */
   async function loadXLSX() {
@@ -447,9 +476,34 @@ export default function DelayedOrdersPage() {
             <span style={{ fontSize: 12 }}>อัปโหลด Excel เพื่อนำเข้าคำสั่งซื้อ</span>
           </div>
         ) : (
+          {/* ── Bulk action bar ── */}
+          {selected.size > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 10, marginBottom: 8 }}>
+              <span style={{ color: '#f87171', fontSize: 13, fontWeight: 600 }}>เลือกอยู่ {selected.size} รายการ</span>
+              <button onClick={deleteSelected} disabled={deleting}
+                style={{ padding: '7px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#f87171', color: 'white', fontWeight: 700, fontSize: 13 }}>
+                {deleting ? '⏳ กำลังลบ...' : `🗑️ ลบ ${selected.size} รายการ`}
+              </button>
+              <button onClick={() => setSelected(new Set())}
+                style={{ padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#2d3154', color: '#94a3b8', fontSize: 13 }}>
+                ยกเลิก
+              </button>
+            </div>
+          )}
+
           <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 12, overflow: 'hidden' }}>
             {/* Table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 120px 140px 90px 120px 160px', gap: 0, borderBottom: '1px solid #2d3154', background: '#0f1117', padding: '10px 16px', fontSize: 11, color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '40px 140px 1fr 120px 140px 90px 120px 160px', gap: 0, borderBottom: '1px solid #2d3154', background: '#0f1117', padding: '10px 16px', fontSize: 11, color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', alignItems: 'center' }}>
+              <div onClick={toggleSelectAll} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{
+                  width: 16, height: 16, borderRadius: 4, border: '2px solid',
+                  borderColor: selected.size === filtered.length && filtered.length > 0 ? '#6366f1' : '#4a5568',
+                  background: selected.size === filtered.length && filtered.length > 0 ? '#6366f1' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'white',
+                }}>
+                  {selected.size === filtered.length && filtered.length > 0 ? '✓' : selected.size > 0 ? '−' : ''}
+                </div>
+              </div>
               <div>ความเร่งด่วน</div>
               <div>เลขออร์เดอร์ / ผู้ซื้อ</div>
               <div>ส่งภายใน</div>
@@ -468,9 +522,21 @@ export default function DelayedOrdersPage() {
                 <div key={order.id} style={{ borderBottom: '1px solid #2d3154' }}>
                   {/* Main row */}
                   <div
-                    style={{ display: 'grid', gridTemplateColumns: '140px 1fr 120px 140px 90px 120px 160px', gap: 0, padding: '12px 16px', alignItems: 'center', cursor: 'pointer', background: isExpanded ? 'rgba(99,102,241,0.06)' : 'transparent' }}
+                    style={{ display: 'grid', gridTemplateColumns: '40px 140px 1fr 120px 140px 90px 120px 160px', gap: 0, padding: '12px 16px', alignItems: 'center', cursor: 'pointer', background: selected.has(order.id) ? 'rgba(248,113,113,0.05)' : isExpanded ? 'rgba(99,102,241,0.06)' : 'transparent' }}
                     onClick={() => toggleExpand(order.id)}
                   >
+                    {/* Checkbox */}
+                    <div onClick={e => { e.stopPropagation(); toggleSelect(order.id) }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                      <div style={{
+                        width: 16, height: 16, borderRadius: 4, border: '2px solid',
+                        borderColor: selected.has(order.id) ? '#f87171' : '#4a5568',
+                        background: selected.has(order.id) ? '#f87171' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'white',
+                        flexShrink: 0,
+                      }}>
+                        {selected.has(order.id) ? '✓' : ''}
+                      </div>
+                    </div>
                     {/* Urgency */}
                     <div>
                       <span style={{ fontSize: 11, color: u.color, background: u.bg, padding: '3px 8px', borderRadius: 6, fontWeight: 600 }}>{u.label}</span>
