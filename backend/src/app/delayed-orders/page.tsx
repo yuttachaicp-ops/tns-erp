@@ -410,17 +410,15 @@ export default function DelayedOrdersPage() {
                     </div>
                     {/* Order number */}
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
-                          background: order.platform === 'SHOPEE' ? 'rgba(251,146,60,0.15)' : 'rgba(167,139,250,0.15)',
-                          color: order.platform === 'SHOPEE' ? '#fb923c' : '#a78bfa',
-                          border: `1px solid ${order.platform === 'SHOPEE' ? '#fb923c40' : '#a78bfa40'}`,
-                        }}>
-                          {order.platform === 'SHOPEE' ? '🧡 Shopee' : '💜 Lazada'}
-                        </span>
-                        <span style={{ fontSize: 12, color: 'white', fontWeight: 600, fontFamily: 'monospace' }}>{order.orderNumber}</span>
-                      </div>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5,
+                        background: order.platform === 'SHOPEE' ? 'rgba(251,146,60,0.15)' : 'rgba(167,139,250,0.15)',
+                        color: order.platform === 'SHOPEE' ? '#fb923c' : '#a78bfa',
+                        border: `1px solid ${order.platform === 'SHOPEE' ? '#fb923c40' : '#a78bfa40'}`,
+                      }}>
+                        {order.platform === 'SHOPEE' ? '🧡 Shopee' : '💜 Lazada'}
+                      </span>
+                      <div style={{ fontSize: 13, color: 'white', fontWeight: 700, fontFamily: 'monospace', marginTop: 4, letterSpacing: '0.02em' }}>{order.orderNumber}</div>
                       <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{order.buyerName || '—'}</div>
                       <div style={{ fontSize: 10, color: '#4a5568' }}>{order.orderStatus}</div>
                     </div>
