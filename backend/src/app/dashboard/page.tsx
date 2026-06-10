@@ -5,8 +5,8 @@ import AppShell from '@/components/layout/AppShell'
 import Header from '@/components/layout/Header'
 
 interface UrgentOrder {
-  id: string; orderNumber: string; platform: string; orderStatus: string; shipByDate: string | null
-  status: string; buyerName: string | null; trackingNumber: string | null
+  id: string; orderNumber: string; platform: string; shop: string; orderStatus: string
+  orderDate: string | null; status: string; buyerName: string | null; trackingNumber: string | null
   items: Array<{ productName: string; quantity: number; isOutOfStock: boolean }>
 }
 
@@ -26,8 +26,8 @@ interface PlatformPricing {
 }
 
 const PLATFORM_META: Record<string, { label: string; icon: string; color: string; bg: string }> = {
-  SHOPEE: { label: 'Shopee', icon: '🧡', color: '#fb923c', bg: 'rgba(251,146,60,0.08)' },
-  LAZADA: { label: 'Lazada', icon: '💜', color: '#a78bfa', bg: 'rgba(167,139,250,0.08)' },
+  SHOPEE: { label: 'Shopee', icon: 'S', color: '#fb923c', bg: 'rgba(251,146,60,0.08)' },
+  LAZADA: { label: 'Lazada', icon: 'L', color: '#a78bfa', bg: 'rgba(167,139,250,0.08)' },
 }
 
 function KPICard({ icon, label, value, sub, color }: { icon: string; label: string; value: number; sub: string; color: string }) {
@@ -44,16 +44,12 @@ function KPICard({ icon, label, value, sub, color }: { icon: string; label: stri
   )
 }
 
-function getUrgencyColor(shipByDate: string | null): string {
-  if (!shipByDate) return '#64748b'
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const ship = new Date(shipByDate)
-  const diff = Math.floor((new Date(ship.getFullYear(), ship.getMonth(), ship.getDate()).getTime() - today.getTime()) / 86400000)
-  if (diff < 0)  return '#f87171'
-  if (diff === 0) return '#fb923c'
-  if (diff === 1) return '#fbbf24'
-  return '#94a3b8'
+function getCancelDeadline(orderDate: string | null): Date | null {
+  if (!orderDate) return null
+  const d = new Date(orderDate)
+  if (isNaN(d.getTime())) return null
+  d.setDate(d.getDate() + 4)
+  return d
 }
 
 export default function DashboardPage() {
@@ -76,37 +72,37 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <Header title="📊 Dashboard" subtitle="ภาพรวมการดำเนินงานประจำวัน" />
+      <Header title="Dashboard" subtitle="ภาพรวมการดำเนินงานประจำวัน" />
       <div style={{padding:'24px',flex:1}}>
         {loading ? (
-          <div style={{textAlign:'center',padding:'60px',color:'#4a5568'}}>⏳ กำลังโหลข้อมูล...</div>
+          <div style={{textAlign:'center',padding:'60px',color:'#4a5568'}}>กำลังโหลข้อมูล...</div>
         ) : (
           <>
             {/* KPI Grid */}
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'16px',marginBottom:'24px'}}>
-              <KPICard icon="📷" label="สินค้ารอถ่ายรูป"    value={s?.photoQueuePending||0}   sub={`ทั้งหมด ${s?.photoQueueTotal||0} รายการ`}   color="#fbbf24" />
-              <KPICard icon="🛒" label="สินค้ายังไม่ลงขาย"  value={s?.listingQueuePending||0} sub={`ทั้งหมด ${s?.listingQueueTotal||0} รายการ`} color="#f87171" />
-              <KPICard icon="📝" label="งานวันนี้"           value={s?.todayLogs||0}           sub="บันทึกวันนี้"                                  color="#4ade80" />
-              <KPICard icon="⏰" label="งานค้าง"             value={s?.pendingLogs||0}         sub="รอดำเนินการ"                                   color="#818cf8" />
-              <KPICard icon="📦" label="ออร์เดอร์ค้างส่ง"   value={s?.delayedOrdersPending||0} sub={`เกินกำหนด ${s?.delayedOrdersOverdue||0} · วันนี้ ${s?.delayedOrdersUrgent||0}`} color="#f87171" />
+              <KPICard icon="cam" label="สินค้ารอถ่ายรูป"    value={s?.photoQueuePending||0}   sub={`ทั้งหมด ${s?.photoQueueTotal||0} รายการ`}   color="#fbbf24" />
+              <KPICard icon="cart" label="สินค้ายังไม่ลงขาย" value={s?.listingQueuePending||0} sub={`ทั้งหมด ${s?.listingQueueTotal||0} รายการ`}  color="#f87171" />
+              <KPICard icon="note" label="งานวันนี้"          value={s?.todayLogs||0}           sub="บันทึกวันนี้"                                   color="#4ade80" />
+              <KPICard icon="clk"  label="งานค้าง"            value={s?.pendingLogs||0}         sub="รอดำเนินการ"                                    color="#818cf8" />
+              <KPICard icon="box"  label="ออร์เดอร์ค้างส่ง"  value={s?.delayedOrdersPending||0} sub={`เกินกำหนด ${s?.delayedOrdersOverdue||0}  |  วันสุดท้าย ${s?.delayedOrdersUrgent||0}`} color="#f87171" />
             </div>
 
             {/* Platform Pricing */}
             {pricing.length > 0 && (
               <div style={{marginBottom:'24px'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-                  <h3 style={{margin:0,fontSize:'15px',fontWeight:'700',color:'white'}}>💰 ตัวคูณราคาแพลตฟอร์ม</h3>
-                  <Link href="/platform-pricing" style={{fontSize:12,color:'#6366f1',textDecoration:'none'}}>แก้ไข →</Link>
+                  <h3 style={{margin:0,fontSize:'15px',fontWeight:'700',color:'white'}}>ตัวคูณราคาแพลตฟอร์ม</h3>
+                  <Link href="/platform-pricing" style={{fontSize:12,color:'#6366f1',textDecoration:'none'}}>แก้ไข</Link>
                 </div>
                 <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
                   {pricing.map(p => {
-                    const meta = PLATFORM_META[p.platform] || { label: p.platform, icon: '🛒', color: '#818cf8', bg: 'rgba(99,102,241,0.08)' }
+                    const meta = PLATFORM_META[p.platform] || { label: p.platform, icon: '?', color: '#818cf8', bg: 'rgba(99,102,241,0.08)' }
                     return (
                       <div key={p.id} style={{background: meta.bg, border:`1px solid ${meta.color}30`, borderRadius:12, padding:'14px 20px', display:'flex', alignItems:'center', gap:14, minWidth:180}}>
-                        <span style={{fontSize:22}}>{meta.icon}</span>
+                        <span style={{fontSize:22,color:meta.color,fontWeight:800}}>{meta.icon}</span>
                         <div>
                           <div style={{fontSize:13,color:'#94a3b8'}}>{meta.label}</div>
-                          <div style={{fontSize:22,fontWeight:800,color:meta.color}}>×{p.multiplier}</div>
+                          <div style={{fontSize:22,fontWeight:800,color:meta.color}}>x{p.multiplier}</div>
                           {p.note && <div style={{fontSize:11,color:'#4a5568',marginTop:2}}>{p.note}</div>}
                         </div>
                       </div>
@@ -116,52 +112,69 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Urgent Orders Table */}
+            {/* Last-Day Orders Table — วันสุดท้ายก่อนยกเลิกอัตโนมัติ */}
             {(data?.urgentOrders?.length ?? 0) > 0 && (
               <div style={{marginBottom:'24px'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-                  <h3 style={{margin:0,fontSize:'15px',fontWeight:'700',color:'white'}}>📦 ออร์เดอร์เร่งด่วน</h3>
-                  <Link href="/delayed-orders" style={{fontSize:12,color:'#6366f1',textDecoration:'none'}}>ดูทั้งหมด →</Link>
+                  <h3 style={{margin:0,fontSize:'15px',fontWeight:'700',color:'#ef4444'}}>
+                    วันสุดท้ายก่อนยกเลิกอัตโนมัติ ({data?.urgentOrders?.length} ออร์เดอร์)
+                  </h3>
+                  <Link href="/delayed-orders" style={{fontSize:12,color:'#6366f1',textDecoration:'none'}}>ดูทั้งหมด</Link>
                 </div>
-                <div style={{background:'#1a1d2e',border:'1px solid #2d3154',borderRadius:12,overflow:'hidden'}}>
-                  <div style={{display:'grid',gridTemplateColumns:'120px 1fr 130px 100px',padding:'8px 16px',background:'#0f1117',fontSize:11,color:'#4a5568',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em'}}>
-                    <div>ส่งภายใน</div><div>เลขออร์เดอร์ / ผู้ซื้อ</div><div>สินค้า</div><div>สถานะ</div>
+                <div style={{background:'#1a1d2e',border:'2px solid rgba(239,68,68,0.4)',borderRadius:12,overflow:'hidden'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'110px 1fr 150px 120px',padding:'8px 16px',background:'rgba(239,68,68,0.08)',fontSize:11,color:'#f87171',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                    <div>ยกเลิกวันนี้</div>
+                    <div>เลขออร์เดอร์ / ผู้ซื้อ</div>
+                    <div>สินค้า</div>
+                    <div>สถานะ</div>
                   </div>
-                  {data?.urgentOrders?.map(o => (
-                    <div key={o.id} style={{display:'grid',gridTemplateColumns:'120px 1fr 130px 100px',padding:'10px 16px',borderTop:'1px solid #2d3154',alignItems:'center'}}>
-                      <div style={{fontSize:12,color:getUrgencyColor(o.shipByDate),fontWeight:600}}>
-                        {o.shipByDate ? new Date(o.shipByDate).toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : '—'}
-                      </div>
-                      <div>
-                        <div style={{display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}>
-                          <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:4,
-                            background: o.platform==='SHOPEE'?'rgba(251,146,60,0.15)':'rgba(167,139,250,0.15)',
-                            color: o.platform==='SHOPEE'?'#fb923c':'#a78bfa',
-                          }}>{o.platform==='SHOPEE'?'🧡 Shopee':'💜 Lazada'}</span>
-                          <span style={{fontSize:11,color:'white',fontFamily:'monospace'}}>{o.orderNumber}</span>
+                  {data?.urgentOrders?.map(o => {
+                    const deadline = getCancelDeadline(o.orderDate)
+                    return (
+                      <div key={o.id} style={{display:'grid',gridTemplateColumns:'110px 1fr 150px 120px',padding:'10px 16px',borderTop:'1px solid rgba(239,68,68,0.2)',alignItems:'center'}}>
+                        <div style={{fontSize:12,color:'#ef4444',fontWeight:700}}>
+                          {deadline ? deadline.toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : '-'}
+                          {o.orderDate && (
+                            <div style={{fontSize:10,color:'#4a5568',marginTop:1}}>
+                              {'สั่ง '}{new Date(o.orderDate).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}
+                            </div>
+                          )}
                         </div>
-                        <div style={{fontSize:11,color:'#64748b'}}>{o.buyerName||'—'}</div>
-                      </div>
-                      <div style={{fontSize:11,color:'#94a3b8'}}>
-                        {o.items.slice(0,2).map((it,i)=>(
-                          <div key={i} style={{color:it.isOutOfStock?'#f87171':'#94a3b8'}}>
-                            {it.isOutOfStock && '⚠️ '}{it.productName.slice(0,30)}{it.productName.length>30?'…':''} ×{it.quantity}
+                        <div>
+                          <div style={{display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}>
+                            <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:4,
+                              background: o.platform==='SHOPEE'?'rgba(251,146,60,0.15)':'rgba(167,139,250,0.15)',
+                              color: o.platform==='SHOPEE'?'#fb923c':'#a78bfa',
+                            }}>
+                              {o.platform==='SHOPEE' ? 'Shopee' : 'Lazada'}
+                            </span>
+                            <span style={{fontSize:11,color:'white',fontFamily:'monospace'}}>{o.orderNumber}</span>
                           </div>
-                        ))}
-                        {o.items.length>2 && <div style={{color:'#4a5568'}}>+{o.items.length-2} รายการ</div>}
+                          <div style={{fontSize:11,color:'#64748b'}}>{o.buyerName||'-'}</div>
+                        </div>
+                        <div style={{fontSize:11,color:'#94a3b8'}}>
+                          {o.items.slice(0,2).map((it,i) => (
+                            <div key={i} style={{color:it.isOutOfStock?'#f87171':'#94a3b8'}}>
+                              {it.isOutOfStock ? '[!] ' : ''}{it.productName.slice(0,26)}{it.productName.length>26?'..':''} x{it.quantity}
+                            </div>
+                          ))}
+                          {o.items.length > 2 && <div style={{color:'#4a5568'}}>+{o.items.length-2} รายการ</div>}
+                        </div>
+                        <div style={{fontSize:11}}>
+                          {o.status==='PACKED'        && <span style={{color:'#60a5fa'}}>แพ็คแล้ว</span>}
+                          {o.status==='READY_TO_SHIP' && <span style={{color:'#34d399'}}>เตรียมส่ง</span>}
+                          {o.status==='PENDING'       && <span style={{color:'#fbbf24'}}>รอดำเนินการ</span>}
+                        </div>
                       </div>
-                      <div style={{fontSize:11,color:o.status==='PACKED'?'#60a5fa':'#fbbf24'}}>
-                        {o.status==='PACKED'?'📦 แพ็คแล้ว':'⏳ รอดำเนินการ'}
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
 
             {/* Recent Activity */}
             <div style={{background:'#1a1d2e',borderRadius:'14px',border:'1px solid #2d3154',padding:'20px'}}>
-              <h3 style={{margin:'0 0 16px',fontSize:'15px',fontWeight:'700',color:'white'}}>🕐 กิจกรรมล่าสุด</h3>
+              <h3 style={{margin:'0 0 16px',fontSize:'15px',fontWeight:'700',color:'white'}}>กิจกรรมล่าสุด</h3>
               {data?.recentActivities.length === 0 ? (
                 <p style={{color:'#4a5568',textAlign:'center',padding:'20px'}}>ยังไม่มีกิจกรรม</p>
               ) : (
@@ -170,7 +183,7 @@ export default function DashboardPage() {
                     <div key={a.id} style={{display:'flex',gap:'12px',padding:'10px 12px',borderRadius:'8px',background:'rgba(99,102,241,0.05)',border:'1px solid #2d3154'}}>
                       <div style={{flex:1}}>
                         <span style={{color:'#818cf8',fontWeight:'600',fontSize:'13px'}}>{a.user?.name}</span>
-                        <span style={{color:'#94a3b8',fontSize:'13px'}}> — {a.detail}</span>
+                        <span style={{color:'#94a3b8',fontSize:'13px'}}>{' — '}{a.detail}</span>
                       </div>
                       <div style={{color:'#4a5568',fontSize:'11px',whiteSpace:'nowrap'}}>
                         {new Date(a.createdAt).toLocaleString('th-TH')}
