@@ -19,7 +19,35 @@ type RunStatus = 'ok' | 'error' | 'running' | 'unknown'
 interface WorkflowStatus {
   status: RunStatus
   lastRun: string | null
+  errorMsg: string | null
   loading: boolean
+}
+
+// แปล error message เป็นภาษาไทย
+function translateError(msg: string): string {
+  if (!msg) return 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+  const m = msg.toLowerCase()
+  if (m.includes('econnrefused'))           return 'ไม่สามารถเชื่อมต่อได้ (Connection Refused)'
+  if (m.includes('etimedout') || m.includes('timeout'))  return 'หมดเวลาเชื่อมต่อ (Timeout)'
+  if (m.includes('enotfound') || m.includes('getaddrinfo')) return 'ไม่พบ Host / DNS Error'
+  if (m.includes('econnreset'))             return 'การเชื่อมต่อถูกตัด (Connection Reset)'
+  if (m.includes('status code 401') || m.includes('unauthorized')) return 'ไม่ได้รับอนุญาต — ตรวจสอบ API Key / Token'
+  if (m.includes('status code 403') || m.includes('forbidden'))    return 'ถูกบล็อกการเข้าถึง (403 Forbidden)'
+  if (m.includes('status code 404'))        return 'ไม่พบ Endpoint ที่ระบุ (404 Not Found)'
+  if (m.includes('status code 429'))        return 'เรียกถี่เกินไป กรุณารอสักครู่ (Rate Limit)'
+  if (m.includes('status code 500'))        return 'Server ปลายทางเกิดข้อผิดพลาด (500)'
+  if (m.includes('status code 502'))        return 'Bad Gateway — Server ปลายทางไม่ตอบสนอง'
+  if (m.includes('status code 503'))        return 'Service ปลายทางไม่พร้อมให้บริการ (503)'
+  if (m.includes('no data') || m.includes('empty'))   return 'ไม่พบข้อมูล / ข้อมูลว่างเปล่า'
+  if (m.includes('cannot read') || m.includes('undefined') || m.includes('null')) return 'ข้อมูลที่ได้รับไม่ถูกรูปแบบ'
+  if (m.includes('is not a function'))      return 'ฟังก์ชันที่เรียกใช้ไม่ถูกต้อง'
+  if (m.includes('invalid') && m.includes('json')) return 'รูปแบบข้อมูล JSON ไม่ถูกต้อง'
+  if (m.includes('authentication') || m.includes('login')) return 'การยืนยันตัวตนล้มเหลว'
+  if (m.includes('network') || m.includes('fetch'))    return 'เกิดปัญหาเครือข่าย'
+  if (m.includes('quota') || m.includes('limit exceeded')) return 'เกินโควต้าที่กำหนด'
+  if (m.includes('ssl') || m.includes('certificate'))  return 'ปัญหา SSL Certificate'
+  // ถ้าแปลไม่ได้ ตัดให้สั้นและส่งกลับ
+  return msg.length > 80 ? msg.slice(0, 80) + '...' : msg
 }
 
 const STATUS_CONFIG: Record<RunStatus, { icon: string; label: string; color: string; bg: string; glow: string }> = {
@@ -58,26 +86,59 @@ export default function WorkflowStatusPage() {
   }, [])
 
   const fetchStatus = useCallback(async (wfId: string) => {
-    setStatuses(prev => ({ ...prev, [wfId]: { ...prev[wfId], status: prev[wfId]?.status || 'unknown', lastRun: prev[wfId]?.lastRun || null, loading: true } }))
+    setStatuses(prev => ({ ...prev, [wfId]: { ...prev[wfId], status: prev[wfId]?.status || 'unknown', lastRun: prev[wfId]?.lastRun || null, errorMsg: prev[wfId]?.errorMsg || null, loading: true } }))
     try {
       const url = localStorage.getItem(STORAGE_URL) || 'http://localhost:5679'
       const key = localStorage.getItem(STORAGE_KEY) || ''
-      const res = await fetch(
-        `${url}/api/v1/executions?workflowId=${wfId}&limit=1&includeData=false`,
-        { headers: { 'X-N8N-API-KEY': key, 'Accept': 'application/json', 'ngrok-skip-browser-warning': 'true' } }
-      )
+      const headers = { 'X-N8N-API-KEY': key, 'Accept': 'application/json', 'ngrok-skip-browser-warning': 'true' }
+
+      // ดึง execution ล่าสุด 1 รายการ
+      const res = await fetch(`${url}/api/v1/executions?workflowId=${wfId}&limit=1&includeData=false`, { headers })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       const last = data.data?.[0]
+
       let s: RunStatus = 'unknown'
+      let errorMsg: string | null = null
+
       if (last) {
-        if (last.status === 'success')           s = 'ok'
-        else if (last.status === 'error' || last.status === 'crashed') s = 'error'
-        else if (last.status === 'running' || last.status === 'new')   s = 'running'
+        if (last.status === 'success') {
+          s = 'ok'
+        } else if (last.status === 'error' || last.status === 'crashed') {
+          s = 'error'
+          // ดึง execution detail เพื่อหา error message
+          try {
+            const detailRes = await fetch(`${url}/api/v1/executions/${last.id}`, { headers })
+            if (detailRes.ok) {
+              const detail = await detailRes.json()
+              // หา error message จาก resultData
+              const errObj = detail?.data?.resultData?.error
+              const rawMsg = errObj?.message || errObj?.description || detail?.data?.resultData?.lastNodeExecuted
+                ? (detail?.data?.resultData?.runData?.[detail?.data?.resultData?.lastNodeExecuted]?.[0]?.error?.message || '')
+                : ''
+              if (rawMsg) errorMsg = translateError(rawMsg)
+              else {
+                // หาจาก node ที่ error
+                const runData = detail?.data?.resultData?.runData || {}
+                for (const nodeName of Object.keys(runData)) {
+                  const nodeRun = runData[nodeName]?.[0]
+                  if (nodeRun?.error?.message) {
+                    errorMsg = `[${nodeName}] ${translateError(nodeRun.error.message)}`
+                    break
+                  }
+                }
+              }
+            }
+          } catch { /* ถ้าดึง detail ไม่ได้ก็ไม่เป็นไร */ }
+          if (!errorMsg) errorMsg = 'เกิดข้อผิดพลาด — ดูรายละเอียดใน n8n'
+        } else if (last.status === 'running' || last.status === 'new') {
+          s = 'running'
+        }
       }
-      setStatuses(prev => ({ ...prev, [wfId]: { status: s, lastRun: last?.startedAt || null, loading: false } }))
+
+      setStatuses(prev => ({ ...prev, [wfId]: { status: s, lastRun: last?.startedAt || null, errorMsg, loading: false } }))
     } catch {
-      setStatuses(prev => ({ ...prev, [wfId]: { status: 'unknown', lastRun: prev[wfId]?.lastRun || null, loading: false } }))
+      setStatuses(prev => ({ ...prev, [wfId]: { status: 'unknown', lastRun: prev[wfId]?.lastRun || null, errorMsg: null, loading: false } }))
     }
   }, [])
 
@@ -209,6 +270,11 @@ export default function WorkflowStatusPage() {
                 <div style={{ fontSize: 13, color: cfg.color, fontWeight: 600, marginTop: 4 }}>
                   {st?.loading ? 'กำลังตรวจสอบ...' : cfg.label}
                 </div>
+                {st?.errorMsg && st.status === 'error' && !st.loading && (
+                  <div style={{ fontSize: 12, color: '#fca5a5', marginTop: 10, background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '8px 12px', textAlign: 'left', lineHeight: 1.5 }}>
+                    ⚠️ {st.errorMsg}
+                  </div>
+                )}
                 {st?.lastRun && !st.loading && (
                   <div style={{ fontSize: 11, color: '#4a5568', marginTop: 8 }}>
                     รันล่าสุด: {timeAgo(st.lastRun)}
