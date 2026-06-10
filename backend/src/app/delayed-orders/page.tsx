@@ -40,21 +40,32 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: '❌ ยกเลิก',      color: '#f87171' },
 }
 
-/* ────────── Parse Shopee Excel ────────── */
-function parseShopeeRows(rows: unknown[][]): ReturnType<typeof buildOrdersFromRows> {
-  // headers in row 0 — detect format
+/* ────────── Auto-detect platform from headers ────────── */
+function parseExcelRows(rows: unknown[][]): ReturnType<typeof buildOrdersFromRows> {
+  if (rows.length < 2) return []
   const header = rows[0] as string[]
   const isShopee = header[0] === 'หมายเลขคำสั่งซื้อ'
-  const isLazada = header[0] === 'Order Number' || header[0] === 'orderNumber'
+  // Lazada: header[0] = 'orderItemId'  OR  header[12] = 'orderNumber'
+  const isLazada = header[0] === 'orderItemId' || header[12] === 'orderNumber'
   if (!isShopee && !isLazada) return []
   return buildOrdersFromRows(rows, isShopee ? 'SHOPEE' : 'LAZADA')
+}
+
+// Parse "10 Jun 2026 14:44" → "2026-06-10T14:44:00" (Lazada date format)
+function parseLazadaDate(s: string): string {
+  if (!s) return ''
+  const months: Record<string, string> = { Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12' }
+  const m = s.match(/(\d+)\s+(\w+)\s+(\d+)\s+(\d+:\d+)/)
+  if (!m) return s
+  const [, d, mon, y, t] = m
+  return `${y}-${months[mon] || '01'}-${d.padStart(2, '0')}T${t}:00`
 }
 
 function buildOrdersFromRows(rows: unknown[][], platform: string) {
   const map = new Map<string, {
     orderNumber: string; platform: string; orderStatus: string
     buyerName?: string; trackingNumber?: string; shipByDate?: string; orderDate?: string
-    items: Array<{ productName: string; sku?: string; variantName?: string; quantity: number }>
+    items: Map<string, { productName: string; sku?: string; variantName?: string; quantity: number }>
   }>()
 
   for (let i = 1; i < rows.length; i++) {
@@ -63,58 +74,79 @@ function buildOrdersFromRows(rows: unknown[][], platform: string) {
 
     let orderNumber: string, orderStatus: string, buyerName: string, orderDate: string,
         trackingNumber: string, shipByDate: string,
-        productName: string, sku: string, variantName: string, quantity: number
+        productName: string, sku: string, variantName: string
 
     if (platform === 'SHOPEE') {
-      orderNumber   = String(r[0] || '')
-      orderStatus   = String(r[1] || '')
-      buyerName     = String(r[5] || '')
-      orderDate     = String(r[6] || '')
+      orderNumber    = String(r[0]  || '')
+      orderStatus    = String(r[1]  || '')
+      buyerName      = String(r[5]  || '')
+      orderDate      = String(r[6]  || '')
       trackingNumber = String(r[14] || '')
-      shipByDate    = String(r[15] || '')
-      productName   = String(r[18] || '')
-      sku           = String(r[19] || '')
-      variantName   = String(r[20] || '')
-      quantity      = Number(r[23]) || 1
+      shipByDate     = String(r[15] || '')
+      productName    = String(r[18] || '')
+      sku            = String(r[19] || '')
+      variantName    = String(r[20] || '')
+
+      const actionable = ['ที่ต้องจัดส่ง', 'การจัดส่ง']
+      if (!actionable.some(s => orderStatus.includes(s))) continue
+
+      if (!map.has(orderNumber)) {
+        map.set(orderNumber, { orderNumber, platform, orderStatus,
+          buyerName: buyerName || undefined,
+          trackingNumber: trackingNumber || undefined,
+          shipByDate: shipByDate || undefined,
+          orderDate: orderDate || undefined,
+          items: new Map(),
+        })
+      }
+      const qty = Number(r[23]) || 1
+      const key = `${sku}|${variantName}`
+      const itemMap = map.get(orderNumber)!.items
+      if (!itemMap.has(key)) {
+        itemMap.set(key, { productName, sku: sku || undefined, variantName: variantName || undefined, quantity: qty })
+      }
+
     } else {
-      // Lazada — English headers
-      orderNumber   = String(r[0] || '')
-      orderStatus   = String(r[1] || '')
-      buyerName     = String(r[4] || '')
-      orderDate     = String(r[5] || '')
-      trackingNumber = String(r[8] || '')
-      shipByDate    = String(r[9] || '')
-      productName   = String(r[13] || '')
-      sku           = String(r[14] || '')
-      variantName   = String(r[15] || '')
-      quantity      = Number(r[17]) || 1
-    }
+      // Lazada: one row = one unit, group by orderNumber + sku + variation for quantity
+      orderNumber    = String(r[12] || '')
+      orderStatus    = String(r[66] || '')
+      buyerName      = String(r[19] || '')   // shippingName
+      orderDate      = parseLazadaDate(String(r[8] || ''))
+      trackingNumber = String(r[59] || '')   // trackingCode
+      shipByDate     = parseLazadaDate(String(r[11] || ''))   // ttsSla
+      productName    = String(r[52] || '')   // itemName
+      sku            = String(r[5]  || '')   // sellerSku
+      variantName    = String(r[53] || '')   // variation
 
-    // Only import actionable orders
-    const actionable = ['ที่ต้องจัดส่ง', 'การจัดส่ง', 'To Ship', 'Shipped', 'Pending']
-    if (!actionable.some(s => orderStatus.includes(s))) continue
+      if (!orderNumber) continue
+      const actionable = ['pending', 'ready_to_ship', 'shipped']
+      if (!actionable.includes(orderStatus.toLowerCase())) continue
 
-    if (!map.has(orderNumber)) {
-      map.set(orderNumber, {
-        orderNumber, platform, orderStatus,
-        buyerName:     buyerName || undefined,
-        trackingNumber: trackingNumber || undefined,
-        shipByDate:    shipByDate || undefined,
-        orderDate:     orderDate || undefined,
-        items: [],
-      })
-    }
-    if (productName) {
-      map.get(orderNumber)!.items.push({
-        productName,
-        sku: sku || undefined,
-        variantName: variantName || undefined,
-        quantity,
-      })
+      if (!map.has(orderNumber)) {
+        map.set(orderNumber, { orderNumber, platform, orderStatus,
+          buyerName: buyerName || undefined,
+          trackingNumber: trackingNumber || undefined,
+          shipByDate: shipByDate || undefined,
+          orderDate: orderDate || undefined,
+          items: new Map(),
+        })
+      }
+      // Each row = 1 unit → accumulate quantity by SKU+variant key
+      const key = `${sku}|${variantName}`
+      const itemMap = map.get(orderNumber)!.items
+      if (itemMap.has(key)) {
+        itemMap.get(key)!.quantity += 1
+      } else {
+        itemMap.set(key, { productName, sku: sku || undefined, variantName: variantName || undefined, quantity: 1 })
+      }
     }
   }
 
-  return Array.from(map.values())
+  // Convert inner item Maps to arrays
+  return Array.from(map.values()).map(o => ({
+    ...o,
+    items: Array.from(o.items.values()),
+  }))
 }
 
 /* ────────── Component ────────── */
@@ -181,7 +213,7 @@ export default function DelayedOrdersPage() {
       const ws   = wb.Sheets[wb.SheetNames[0]]
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown[][]
 
-      const parsed = parseShopeeRows(rows)
+      const parsed = parseExcelRows(rows)
       if (parsed.length === 0) {
         alert('ไม่พบคำสั่งซื้อที่รอดำเนินการในไฟล์นี้\n(รองรับเฉพาะรายการสถานะ: ที่ต้องจัดส่ง, การจัดส่ง)')
         return
