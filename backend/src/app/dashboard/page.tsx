@@ -5,7 +5,7 @@ import AppShell from '@/components/layout/AppShell'
 import Header from '@/components/layout/Header'
 
 interface UrgentOrder {
-  id: string; orderNumber: string; orderStatus: string; shipByDate: string | null
+  id: string; orderNumber: string; platform: string; orderStatus: string; shipByDate: string | null
   status: string; buyerName: string | null; trackingNumber: string | null
   items: Array<{ productName: string; quantity: number; isOutOfStock: boolean }>
 }
@@ -133,7 +133,13 @@ export default function DashboardPage() {
                         {o.shipByDate ? new Date(o.shipByDate).toLocaleDateString('th-TH',{day:'numeric',month:'short'}) : '—'}
                       </div>
                       <div>
-                        <div style={{fontSize:12,color:'white',fontFamily:'monospace'}}>{o.orderNumber}</div>
+                        <div style={{display:'flex',alignItems:'center',gap:5,flexWrap:'wrap'}}>
+                          <span style={{fontSize:9,fontWeight:700,padding:'1px 5px',borderRadius:4,
+                            background: o.platform==='SHOPEE'?'rgba(251,146,60,0.15)':'rgba(167,139,250,0.15)',
+                            color: o.platform==='SHOPEE'?'#fb923c':'#a78bfa',
+                          }}>{o.platform==='SHOPEE'?'🧡 Shopee':'💜 Lazada'}</span>
+                          <span style={{fontSize:11,color:'white',fontFamily:'monospace'}}>{o.orderNumber}</span>
+                        </div>
                         <div style={{fontSize:11,color:'#64748b'}}>{o.buyerName||'—'}</div>
                       </div>
                       <div style={{fontSize:11,color:'#94a3b8'}}>
