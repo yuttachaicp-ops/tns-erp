@@ -114,7 +114,7 @@ function buildOrdersFromRows(rows: unknown[][], platform: string) {
     }
   }
 
-  return [...map.values()]
+  return Array.from(map.values())
 }
 
 /* ────────── Component ────────── */
