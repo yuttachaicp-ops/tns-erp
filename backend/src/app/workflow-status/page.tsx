@@ -232,65 +232,80 @@ export default function WorkflowStatusPage() {
           </div>
         )}
 
-        {/* Overall Banner */}
-        {apiKey && !anyLoading && (
-          <div style={{
-            borderRadius: 14, padding: '20px 24px', marginBottom: 28, textAlign: 'center',
-            background: hasError ? 'rgba(239,68,68,0.08)' : allOk ? 'rgba(34,197,94,0.08)' : 'rgba(100,116,139,0.08)',
-            border: `1px solid ${hasError ? 'rgba(239,68,68,0.3)' : allOk ? 'rgba(34,197,94,0.3)' : 'rgba(100,116,139,0.3)'}`,
-            boxShadow: hasError ? '0 0 24px rgba(239,68,68,0.1)' : allOk ? '0 0 24px rgba(34,197,94,0.1)' : 'none',
-          }}>
-            <div style={{ fontSize: 36 }}>{hasError ? '❌' : allOk ? '✅' : '⚪'}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: hasError ? '#f87171' : allOk ? '#4ade80' : '#64748b', marginTop: 8 }}>
-              {hasError ? 'มีบาง Workflow ที่มีปัญหา' : allOk ? 'ระบบทำงานปกติทุกตัว' : 'ไม่สามารถตรวจสอบได้'}
-            </div>
+        {/* Table */}
+        {apiKey && (
+          <div style={{ background: '#1a1d2e', borderRadius: 12, border: '1px solid #2d3154', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: '#0f1117' }}>
+                  {['Workflow', 'สถานะ', 'สาเหตุ (เมื่อ Error)', 'รันล่าสุด', 'ลิงก์'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: '#4a5568', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {WORKFLOWS.map((wf, i) => {
+                  const st  = statuses[wf.id]
+                  const cfg = STATUS_CONFIG[st?.status || 'unknown']
+                  return (
+                    <tr key={wf.id} style={{ borderTop: '1px solid #2d3154', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+                      {/* ชื่อ */}
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: 600, color: 'white', fontSize: 14 }}>{getName(wf)}</div>
+                        <div style={{ fontSize: 11, color: '#3a4060', fontFamily: 'monospace', marginTop: 2 }}>{wf.id}</div>
+                      </td>
+                      {/* สถานะ */}
+                      <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                        {st?.loading ? (
+                          <span style={{ color: '#4a5568', fontSize: 13 }}>⏳ กำลังตรวจสอบ...</span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 999, background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: 13, border: `1px solid ${cfg.color}30` }}>
+                            {cfg.icon} {cfg.label}
+                          </span>
+                        )}
+                      </td>
+                      {/* สาเหตุ */}
+                      <td style={{ padding: '14px 16px', maxWidth: 320 }}>
+                        {st?.status === 'error' && st.errorMsg && !st.loading ? (
+                          <span style={{ color: '#fca5a5', fontSize: 13, lineHeight: 1.5 }}>{st.errorMsg}</span>
+                        ) : (
+                          <span style={{ color: '#3a4060', fontSize: 13 }}>—</span>
+                        )}
+                      </td>
+                      {/* เวลา */}
+                      <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                        {st?.lastRun && !st.loading ? (
+                          <span style={{ color: '#64748b', fontSize: 13 }}>{timeAgo(st.lastRun)}</span>
+                        ) : (
+                          <span style={{ color: '#3a4060', fontSize: 13 }}>—</span>
+                        )}
+                      </td>
+                      {/* ลิงก์ */}
+                      <td style={{ padding: '14px 16px' }}>
+                        <a href={`${n8nUrl.replace(':5679', ':5678')}/workflow/${wf.id}/executions`} target="_blank" rel="noopener noreferrer"
+                          style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                          🔗 เปิดใน n8n
+                        </a>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
 
-        {/* Workflow Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-          {WORKFLOWS.map(wf => {
-            const st = statuses[wf.id]
-            const cfg = STATUS_CONFIG[st?.status || 'unknown']
-            return (
-              <div key={wf.id} style={{
-                background: cfg.bg, border: `1px solid ${cfg.color}30`, borderRadius: 16,
-                padding: '24px 20px', textAlign: 'center',
-                boxShadow: st?.loading ? 'none' : cfg.glow,
-                transition: 'box-shadow 0.3s ease',
-              }}>
-                {st?.loading ? (
-                  <div style={{ fontSize: 36, opacity: 0.4 }}>⏳</div>
-                ) : (
-                  <div style={{ fontSize: 40 }}>{cfg.icon}</div>
-                )}
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginTop: 12 }}>
-                  {getName(wf)}
-                </div>
-                <div style={{ fontSize: 13, color: cfg.color, fontWeight: 600, marginTop: 4 }}>
-                  {st?.loading ? 'กำลังตรวจสอบ...' : cfg.label}
-                </div>
-                {st?.errorMsg && st.status === 'error' && !st.loading && (
-                  <div style={{ fontSize: 12, color: '#fca5a5', marginTop: 10, background: 'rgba(239,68,68,0.1)', borderRadius: 8, padding: '8px 12px', textAlign: 'left', lineHeight: 1.5 }}>
-                    ⚠️ {st.errorMsg}
-                  </div>
-                )}
-                {st?.lastRun && !st.loading && (
-                  <div style={{ fontSize: 11, color: '#4a5568', marginTop: 8 }}>
-                    รันล่าสุด: {timeAgo(st.lastRun)}
-                  </div>
-                )}
-                <div style={{ fontSize: 10, color: '#3a4060', marginTop: 4, fontFamily: 'monospace' }}>
-                  {wf.id.slice(0, 8)}...
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        <div style={{ marginTop: 24, textAlign: 'center', color: '#3a4060', fontSize: 12 }}>
-          รีเฟรชอัตโนมัติทุก 30 วินาที
-        </div>
+        {/* Overall summary */}
+        {apiKey && !anyLoading && (
+          <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, textAlign: 'center', fontSize: 13, fontWeight: 600,
+            background: hasError ? 'rgba(239,68,68,0.07)' : allOk ? 'rgba(34,197,94,0.07)' : 'rgba(100,116,139,0.07)',
+            color: hasError ? '#f87171' : allOk ? '#4ade80' : '#64748b',
+            border: `1px solid ${hasError ? 'rgba(239,68,68,0.2)' : allOk ? 'rgba(34,197,94,0.2)' : 'rgba(100,116,139,0.2)'}`,
+          }}>
+            {hasError ? '❌ มีบาง Workflow ที่มีปัญหา' : allOk ? '✅ ระบบทำงานปกติทุกตัว' : '⚪ ไม่สามารถตรวจสอบได้'}
+            <span style={{ color: '#3a4060', fontWeight: 400, marginLeft: 12 }}>· รีเฟรชอัตโนมัติทุก 30 วินาที</span>
+          </div>
+        )}
       </div>
     </AppShell>
   )
