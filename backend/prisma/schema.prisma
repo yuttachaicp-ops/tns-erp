@@ -387,3 +387,37 @@ model PlatformPricing {
   updatedAt  DateTime @updatedAt
   @@map("platform_pricing")
 }
+
+model DelayedOrder {
+  id             String             @id @default(cuid())
+  orderNumber    String             @unique
+  platform       String             @default("SHOPEE")
+  orderStatus    String
+  buyerName      String?
+  trackingNumber String?
+  shipByDate     DateTime?
+  orderDate      DateTime?
+  importBatch    String?
+  status         String             @default("PENDING")
+  note           String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  items          DelayedOrderItem[]
+  @@map("delayed_orders")
+}
+
+model DelayedOrderItem {
+  id              String       @id @default(cuid())
+  orderId         String
+  productName     String
+  sku             String?
+  variantName     String?
+  quantity        Int          @default(1)
+  isOutOfStock    Boolean      @default(false)
+  expectedArrival String?
+  note            String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  order           DelayedOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@map("delayed_order_items")
+}

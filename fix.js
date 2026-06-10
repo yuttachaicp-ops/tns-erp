@@ -1,0 +1,13 @@
+var fs=require('fs');
+var content="export const CAT_COLORS = [";
+content+="  { id: 'orange',  label: '??? / Orange Tabby' },";
+content+="  { id: 'black',   label: '?? / Black' },";
+content+="  { id: 'white',   label: '??? / White' },";
+content+="  { id: 'gray',    label: '??? / Gray' },";
+content+="  { id: 'brown',   label: '?????? / Brown' },";
+content+="  { id: 'calico',  label: '?????? / Calico' },";
+content+="  { id: 'tabby',   label: '??? / Tabby' },";
+content+="  { id: 'tuxedo',  label: '????? / Tuxedo' },";
+content+="]\n";
+fs.writeFileSync('src/lib/cat-colors.ts', content, 'utf8');
+console.log('cat-colors.ts created');

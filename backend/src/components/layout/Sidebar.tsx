@@ -11,10 +11,9 @@ const WORK_MENU = [
   { href:'/dashboard', icon:'📊', label:'Dashboard' },
   { href:'/photo-queue', icon:'📷', label:'สินค้าถ่ายรูป' },
   { href:'/listing-queue', icon:'🛒', label:'สินค้ายังไม่ได้ลงขาย' },
-  { href:'/no-barcode', icon:'🏷️', label:'สินค้าไม่มีบาร์โค้ด' },
+  { href:'/delayed-orders', icon:'📦', label:'คำสั่งซื้อที่ล้าช้า' },
   { href:'/platform-pricing', icon:'💰', label:'ราคาแพลตฟอร์ม' },
   { href:'/daily-logs', icon:'📝', label:'บันทึกงานประจำวัน' },
-  { href:'/stock-close', icon:'🚫', label:'แจ้งปิดสต็อก' },
 ]
 const SETTING_MENU = [
   { href:'/users', icon:'👥', label:'ผู้ใช้งาน' },

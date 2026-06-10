@@ -22,6 +22,9 @@ export async function GET(req: NextRequest) {
     photoByStatus,
     listingByPlatform,
     logsByCategory,
+    delayedOrdersPending,
+    delayedOrdersOverdue,
+    delayedOrdersUrgent,
   ] = await Promise.all([
     prisma.photoQueue.count(),
     prisma.photoQueue.count({ where: { status: 'PENDING' } }),
@@ -37,7 +40,18 @@ export async function GET(req: NextRequest) {
     prisma.photoQueue.groupBy({ by: ['status'], _count: true }),
     prisma.listingQueue.groupBy({ by: ['platform'], _count: true }),
     prisma.dailyLog.groupBy({ by: ['workCategory'], _count: true }),
+    prisma.delayedOrder.count({ where: { status: 'PENDING' } }),
+    prisma.delayedOrder.count({ where: { status: 'PENDING', shipByDate: { lt: today } } }),
+    prisma.delayedOrder.count({ where: { status: 'PENDING', shipByDate: { gte: today, lt: tomorrow } } }),
   ])
+
+  // Top urgent delayed orders for dashboard table
+  const urgentOrders = await prisma.delayedOrder.findMany({
+    where: { status: { in: ['PENDING', 'PACKED'] } },
+    include: { items: { select: { productName: true, quantity: true, isOutOfStock: true }, take: 3 } },
+    orderBy: [{ shipByDate: 'asc' }],
+    take: 5,
+  })
 
   return successResponse({
     summary: {
@@ -47,6 +61,9 @@ export async function GET(req: NextRequest) {
       listingQueuePending,
       todayLogs,
       pendingLogs,
+      delayedOrdersPending,
+      delayedOrdersOverdue,
+      delayedOrdersUrgent,
     },
     charts: {
       photoByStatus,
@@ -54,5 +71,6 @@ export async function GET(req: NextRequest) {
       logsByCategory,
     },
     recentActivities,
+    urgentOrders,
   })
 }
