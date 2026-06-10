@@ -220,7 +220,7 @@ export default function DelayedOrdersPage() {
       await fetch('/api/delayed-orders', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids: [...selected] }),
+        body: JSON.stringify({ ids: Array.from(selected) }),
       })
       setSelected(new Set())
       await fetchOrders()
