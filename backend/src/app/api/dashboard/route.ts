@@ -11,12 +11,7 @@ export async function GET(req: NextRequest) {
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
-  // cancelDeadline = orderDate + 4 days
-  // "วันสุดท้าย" = orderDate was exactly 4 days ago (cancelDeadline = today)
-  const fourDaysAgo = new Date(today); fourDaysAgo.setDate(fourDaysAgo.getDate() - 4)
-  const threeDaysAgo = new Date(today); threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
-  // "เกินกำหนด" = orderDate < 4 days ago (cancelDeadline already passed)
-  const lastDayStatuses = { in: ['PENDING', 'PACKED', 'READY_TO_SHIP'] }
+  const activeStatuses = { in: ['PENDING', 'PACKED', 'READY_TO_SHIP'] }
 
   const [
     photoQueueTotal,
@@ -30,8 +25,6 @@ export async function GET(req: NextRequest) {
     listingByPlatform,
     logsByCategory,
     delayedOrdersPending,
-    delayedOrdersOverdue,
-    delayedOrdersUrgent,
   ] = await Promise.all([
     prisma.photoQueue.count(),
     prisma.photoQueue.count({ where: { status: 'PENDING' } }),
@@ -47,23 +40,24 @@ export async function GET(req: NextRequest) {
     prisma.photoQueue.groupBy({ by: ['status'], _count: true }),
     prisma.listingQueue.groupBy({ by: ['platform'], _count: true }),
     prisma.dailyLog.groupBy({ by: ['workCategory'], _count: true }),
-    prisma.delayedOrder.count({ where: { status: { in: ['PENDING', 'PACKED', 'READY_TO_SHIP'] } } }),
-    // เกินกำหนด: cancelDeadline ผ่านไปแล้ว = orderDate < fourDaysAgo
-    prisma.delayedOrder.count({ where: { status: lastDayStatuses, orderDate: { lt: fourDaysAgo } } }),
-    // วันสุดท้าย: cancelDeadline = วันนี้ = orderDate เมื่อ 4 วันที่แล้ว
-    prisma.delayedOrder.count({ where: { status: lastDayStatuses, orderDate: { gte: fourDaysAgo, lt: threeDaysAgo } } }),
+    prisma.delayedOrder.count({ where: { status: activeStatuses } }),
   ])
 
-  // Dashboard table: เฉพาะ "วันสุดท้าย!" = cancelDeadline วันนี้ (orderDate = 4 วันที่แล้ว)
+  // ส่ง active orders ทั้งหมดไปให้ browser filter — เพื่อให้ใช้ timezone ของ client (Bangkok) ตรงกับหน้า delayed-orders
   const urgentOrders = await prisma.delayedOrder.findMany({
-    where: {
-      status: lastDayStatuses,
-      orderDate: { gte: fourDaysAgo, lt: threeDaysAgo },
+    where: { status: activeStatuses },
+    select: {
+      id: true, orderNumber: true, platform: true, shop: true,
+      orderStatus: true, orderDate: true, status: true,
+      buyerName: true, trackingNumber: true,
+      items: { select: { productName: true, quantity: true, isOutOfStock: true }, take: 3 },
     },
-    include: { items: { select: { productName: true, quantity: true, isOutOfStock: true }, take: 3 } },
     orderBy: [{ orderDate: 'asc' }],
-    take: 50,
   })
+
+  // Placeholder counts — dashboard page will recalculate from urgentOrders using browser timezone
+  const delayedOrdersOverdue = 0
+  const delayedOrdersUrgent  = 0
 
   return successResponse({
     summary: {
