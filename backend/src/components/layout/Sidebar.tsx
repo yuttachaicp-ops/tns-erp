@@ -12,6 +12,7 @@ const WORK_MENU = [
   { href:'/photo-queue', icon:'📷', label:'สินค้าถ่ายรูป' },
   { href:'/listing-queue', icon:'🛒', label:'สินค้ายังไม่ได้ลงขาย' },
   { href:'/no-barcode', icon:'🏷️', label:'สินค้าไม่มีบาร์โค้ด' },
+  { href:'/platform-pricing', icon:'💰', label:'ราคาแพลตฟอร์ม' },
   { href:'/daily-logs', icon:'📝', label:'บันทึกงานประจำวัน' },
   { href:'/stock-close', icon:'🚫', label:'แจ้งปิดสต็อก' },
 ]

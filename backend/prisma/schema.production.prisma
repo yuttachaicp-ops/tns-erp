@@ -377,3 +377,13 @@ model NoBarcode {
   user        User     @relation(fields: [createdBy], references: [id])
   @@map("no_barcodes")
 }
+
+model PlatformPricing {
+  id         String   @id @default(cuid())
+  platform   String   @unique
+  multiplier Float    @default(1.0)
+  commission Float    @default(0.0)
+  note       String?
+  updatedAt  DateTime @updatedAt
+  @@map("platform_pricing")
+}
