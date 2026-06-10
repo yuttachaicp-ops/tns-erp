@@ -88,11 +88,11 @@ export default function DashboardPage() {
           <>
             {/* KPI Grid */}
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'16px',marginBottom:'24px'}}>
-              <KPICard icon="[cam]"  label="สินค้ารอถ่ายรูป"    value={s?.photoQueuePending||0}   sub={`ทั้งหมด ${s?.photoQueueTotal||0} รายการ`}   color="#fbbf24" />
-              <KPICard icon="[cart]" label="สินค้ายังไม่ลงขาย"  value={s?.listingQueuePending||0} sub={`ทั้งหมด ${s?.listingQueueTotal||0} รายการ`}  color="#f87171" />
-              <KPICard icon="[log]"  label="งานวันนี้"           value={s?.todayLogs||0}           sub="บันทึกวันนี้"                                   color="#4ade80" />
-              <KPICard icon="[clk]"  label="งานค้าง"             value={s?.pendingLogs||0}         sub="รอดำเนินการ"                                    color="#818cf8" />
-              <KPICard icon="[box]"  label="ออร์เดอร์ค้างส่ง"   value={s?.delayedOrdersPending||0} sub={`เกินกำหนด ${overdueCount} | วันสุดท้าย ${urgentCount}`} color="#f87171" />
+              <KPICard icon="📷"  label="สินค้ารอถ่ายรูป"    value={s?.photoQueuePending||0}   sub={`ทั้งหมด ${s?.photoQueueTotal||0} รายการ`}   color="#fbbf24" />
+              <KPICard icon="🛒" label="สินค้ายังไม่ลงขาย"  value={s?.listingQueuePending||0} sub={`ทั้งหมด ${s?.listingQueueTotal||0} รายการ`}  color="#f87171" />
+              <KPICard icon="📝"  label="งานวันนี้"           value={s?.todayLogs||0}           sub="บันทึกวันนี้"                                   color="#4ade80" />
+              <KPICard icon="⏰"  label="งานค้าง"             value={s?.pendingLogs||0}         sub="รอดำเนินการ"                                    color="#818cf8" />
+              <KPICard icon="📦"  label="ออร์เดอร์ค้างส่ง"   value={s?.delayedOrdersPending||0} sub={`เกินกำหนด ${overdueCount} | วันสุดท้าย ${urgentCount}`} color="#f87171" />
             </div>
 
             {/* Platform Pricing */}
@@ -126,7 +126,7 @@ export default function DashboardPage() {
               <div style={{marginBottom:'24px'}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
                   <h3 style={{margin:0,fontSize:'15px',fontWeight:'700',color:'#ef4444'}}>
-                    วันสุดท้ายก่อนยกเลิกอัตโนมัติ ({lastDayOrders.length} ออร์เดอร์)
+                    ออร์เดอร์ที่ต้องรีบส่ง ({lastDayOrders.length} รายการ)
                   </h3>
                   <Link href="/delayed-orders" style={{fontSize:12,color:'#6366f1',textDecoration:'none'}}>ดูทั้งหมด</Link>
                 </div>
