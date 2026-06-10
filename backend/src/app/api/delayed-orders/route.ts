@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     // 1 query to find all existing orders at once
     const existing = await prisma.delayedOrder.findMany({
       where: { orderNumber: { in: orderNumbers } },
-      select: { orderNumber: true, trackingNumber: true, shipByDate: true, orderDate: true },
+      select: { orderNumber: true, trackingNumber: true, shipByDate: true, orderDate: true, status: true },
     })
     const existingMap = new Map(existing.map(e => [e.orderNumber, e]))
 
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
           shipByDate:     o.shipByDate ? new Date(o.shipByDate) : null,
           orderDate:      o.orderDate  ? new Date(o.orderDate)  : null,
           importBatch,
-          status: 'PENDING',
+          status: o.orderStatus?.toLowerCase() === 'ready_to_ship' ? 'READY_TO_SHIP' : 'PENDING',
           items: {
             create: o.items.map(item => ({
               productName: item.productName,
@@ -110,6 +110,9 @@ export async function POST(req: NextRequest) {
     // Batch update existing (parallel)
     const updateOps = toUpdate.map(o => {
       const prev = existingMap.get(o.orderNumber)!
+      // Upgrade status from Excel: ready_to_ship → READY_TO_SHIP (don't downgrade SHIPPED/CANCELLED)
+      const isReadyToShip = o.orderStatus?.toLowerCase() === 'ready_to_ship'
+      const shouldUpgrade = isReadyToShip && !['SHIPPED', 'CANCELLED'].includes(prev.status as string)
       return prisma.delayedOrder.update({
         where: { orderNumber: o.orderNumber },
         data: {
@@ -120,6 +123,7 @@ export async function POST(req: NextRequest) {
           shipByDate:     o.shipByDate ? new Date(o.shipByDate) : prev.shipByDate,
           orderDate:      o.orderDate  ? new Date(o.orderDate)  : prev.orderDate,
           importBatch,
+          ...(shouldUpgrade && { status: 'READY_TO_SHIP' }),
         },
       })
     })

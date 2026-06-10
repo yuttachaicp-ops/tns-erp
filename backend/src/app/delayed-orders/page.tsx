@@ -43,21 +43,38 @@ function getUrgency(shipByDate: string | null, orderStatus: string): { label: st
 }
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  PENDING:   { label: '⏳ รอดำเนินการ', color: '#fbbf24' },
-  PACKED:    { label: '📦 แพ็คแล้ว',    color: '#60a5fa' },
-  SHIPPED:   { label: '🚚 ส่งแล้ว',     color: '#4ade80' },
-  CANCELLED: { label: '❌ ยกเลิก',      color: '#f87171' },
+  PENDING:        { label: '⏳ รอดำเนินการ',        color: '#fbbf24' },
+  PACKED:         { label: '📦 แพ็คแล้ว',            color: '#60a5fa' },
+  READY_TO_SHIP:  { label: '📦✅ แพ็คแล้วเตรียมส่ง', color: '#34d399' },
+  SHIPPED:        { label: '🚚 ส่งแล้ว',             color: '#4ade80' },
+  CANCELLED:      { label: '❌ ยกเลิก',              color: '#f87171' },
 }
 
-/* ────────── Auto-detect platform from headers ────────── */
-function parseExcelRows(rows: unknown[][]): ReturnType<typeof buildOrdersFromRows> {
-  if (rows.length < 2) return []
+/* ────────── Auto-detect file type from headers ────────── */
+type ParseResult =
+  | { type: 'ORDER_IMPORT'; orders: ReturnType<typeof buildOrdersFromRows> }
+  | { type: 'PACK_CONFIRM'; orders: Array<{ orderNumber: string; trackingNumber: string }> }
+  | { type: 'UNKNOWN' }
+
+function parseExcelRows(rows: unknown[][]): ParseResult {
+  if (rows.length < 2) return { type: 'UNKNOWN' }
   const header = rows[0] as string[]
+
+  // Video Record Report (dobybot) — col 0 = 'Record Time', col 9 = 'Order Number'
+  if (header[0] === 'Record Time' && header[9] === 'Order Number') {
+    const orders = rows.slice(1)
+      .filter(r => r[9])
+      .map(r => ({
+        orderNumber:   String(r[9] || '').trim(),
+        trackingNumber: String(r[10] || '').trim(),
+      }))
+    return { type: 'PACK_CONFIRM', orders }
+  }
+
   const isShopee = header[0] === 'หมายเลขคำสั่งซื้อ'
-  // Lazada: header[0] = 'orderItemId'  OR  header[12] = 'orderNumber'
   const isLazada = header[0] === 'orderItemId' || header[12] === 'orderNumber'
-  if (!isShopee && !isLazada) return []
-  return buildOrdersFromRows(rows, isShopee ? 'SHOPEE' : 'LAZADA')
+  if (!isShopee && !isLazada) return { type: 'UNKNOWN' }
+  return { type: 'ORDER_IMPORT', orders: buildOrdersFromRows(rows, isShopee ? 'SHOPEE' : 'LAZADA') }
 }
 
 // Parse "10 Jun 2026 14:44" → "2026-06-10T14:44:00" (Lazada date format)
@@ -164,7 +181,7 @@ export default function DelayedOrdersPage() {
   const [counts,   setCounts]   = useState<CountEntry[]>([])
   const [loading,  setLoading]  = useState(true)
   const [importing, setImporting] = useState(false)
-  const [importResult, setImportResult] = useState<{ created: number; updated: number; shop: string } | null>(null)
+  const [importResult, setImportResult] = useState<{ type: string; created?: number; updated?: number; notFound?: number; shop?: string } | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [selectedShop, setSelectedShop] = useState<string>('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
@@ -254,20 +271,42 @@ export default function DelayedOrdersPage() {
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as unknown[][]
 
       const parsed = parseExcelRows(rows)
-      if (parsed.length === 0) {
-        alert('ไม่พบคำสั่งซื้อที่รอดำเนินการในไฟล์นี้\n(รองรับเฉพาะรายการสถานะ: ที่ต้องจัดส่ง, การจัดส่ง)')
+
+      if (parsed.type === 'UNKNOWN') {
+        alert('ไม่รู้จัก format ไฟล์นี้\nรองรับ: Shopee Export, Lazada Export, Video Record Report (dobybot)')
         return
       }
 
+      if (parsed.type === 'PACK_CONFIRM') {
+        // Video Record Report → mark orders as READY_TO_SHIP
+        if (parsed.orders.length === 0) { alert('ไม่พบเลขออร์เดอร์ในไฟล์'); return }
+        const res = await fetch('/api/delayed-orders/mark-packed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ orders: parsed.orders }),
+        })
+        const data = await res.json()
+        if (data.success) {
+          setImportResult({ type: 'PACK_CONFIRM', updated: data.data.updated, notFound: data.data.notFound })
+          await fetchOrders()
+        }
+        return
+      }
+
+      // ORDER_IMPORT flow (Shopee/Lazada)
+      if (parsed.orders.length === 0) {
+        alert('ไม่พบคำสั่งซื้อที่รอดำเนินการในไฟล์นี้\n(รองรับเฉพาะ: ที่ต้องจัดส่ง, การจัดส่ง, ready_to_ship)')
+        return
+      }
       const today = new Date().toISOString().slice(0, 10)
       const res = await fetch('/api/delayed-orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ importBatch: today, shop: selectedShop, orders: parsed }),
+        body: JSON.stringify({ importBatch: today, shop: selectedShop, orders: parsed.orders }),
       })
       const data = await res.json()
       if (data.success) {
-        setImportResult({ ...data.data, shop: selectedShop })
+        setImportResult({ type: 'ORDER_IMPORT', ...data.data, shop: selectedShop })
         await fetchOrders()
       }
     } catch (e) {
@@ -325,9 +364,10 @@ export default function DelayedOrdersPage() {
     return true
   })
 
-  const pendingCount   = countMap['PENDING']   || 0
-  const packedCount    = countMap['PACKED']     || 0
-  const shippedCount   = countMap['SHIPPED']    || 0
+  const pendingCount      = countMap['PENDING']        || 0
+  const packedCount       = countMap['PACKED']         || 0
+  const readyToShipCount  = countMap['READY_TO_SHIP']  || 0
+  const shippedCount      = countMap['SHIPPED']        || 0
   const overdueCount   = orders.filter(o => o.status === 'PENDING' && getUrgency(o.shipByDate, o.orderStatus).rank === 0).length
   const todayCount     = orders.filter(o => o.status === 'PENDING' && getUrgency(o.shipByDate, o.orderStatus).rank === 1).length
 
@@ -392,25 +432,30 @@ export default function DelayedOrdersPage() {
                 <div style={{ color: '#4a5568', fontSize: 14 }}>← เลือกร้านก่อน</div>
               )}
               <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>ลาก-วาง หรือคลิกเพื่ออัปโหลด Excel</div>
-              <div style={{ color: '#4a5568', fontSize: 11, marginTop: 2 }}>นำเข้าเฉพาะ: ที่ต้องจัดส่ง, การจัดส่ง, ready_to_ship</div>
+              <div style={{ color: '#4a5568', fontSize: 11, marginTop: 2 }}>รองรับ: Shopee Export · Lazada Export · Video Record Report (dobybot)</div>
             </>
           )}
         </div>
 
         {importResult && (
           <div style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: 10, padding: '12px 16px', color: '#4ade80', fontSize: 13 }}>
-            ✅ นำเข้าสำเร็จ {importResult.shop ? `(${getShop(importResult.shop).icon} ${getShop(importResult.shop).label})` : ''} — สร้างใหม่ {importResult.created} รายการ | อัพเดท {importResult.updated} รายการ
+            {importResult.type === 'PACK_CONFIRM' ? (
+              <>✅ อัพเดทสถานะ <strong>📦✅ แพ็คแล้วเตรียมส่ง</strong> สำเร็จ — อัพเดท {importResult.updated} ออร์เดอร์{importResult.notFound ? ` (ไม่พบ ${importResult.notFound} รายการ)` : ''}</>
+            ) : (
+              <>✅ นำเข้าสำเร็จ {importResult.shop ? `(${getShop(importResult.shop).icon} ${getShop(importResult.shop).label})` : ''} — สร้างใหม่ {importResult.created} | อัพเดท {importResult.updated} รายการ</>
+            )}
           </div>
         )}
 
         {/* ── Summary Cards ── */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {[
-            { label: '⏳ รอดำเนินการ', value: pendingCount,  color: '#fbbf24' },
-            { label: '📦 แพ็คแล้ว',   value: packedCount,   color: '#60a5fa' },
-            { label: '🚚 ส่งแล้ว',    value: shippedCount,  color: '#4ade80' },
-            { label: '🔴 เกินกำหนด',  value: overdueCount,  color: '#f87171' },
-            { label: '🟠 วันนี้',      value: todayCount,    color: '#fb923c' },
+            { label: '⏳ รอดำเนินการ',        value: pendingCount,      color: '#fbbf24' },
+            { label: '📦 แพ็คแล้ว',           value: packedCount,       color: '#60a5fa' },
+            { label: '📦✅ เตรียมส่ง',         value: readyToShipCount,  color: '#34d399' },
+            { label: '🚚 ส่งแล้ว',            value: shippedCount,      color: '#4ade80' },
+            { label: '🔴 เกินกำหนด',          value: overdueCount,      color: '#f87171' },
+            { label: '🟠 วันนี้',              value: todayCount,        color: '#fb923c' },
           ].map(c => (
             <div key={c.label} style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 10, padding: '12px 18px', minWidth: 110 }}>
               <div style={{ fontSize: 11, color: '#64748b' }}>{c.label}</div>
@@ -442,7 +487,7 @@ export default function DelayedOrdersPage() {
           {/* Status + urgency filter */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ fontSize: 12, color: '#64748b', marginRight: 4 }}>สถานะ:</span>
-            {['ALL', 'PENDING', 'PACKED', 'SHIPPED'].map(s => (
+            {['ALL', 'PENDING', 'PACKED', 'READY_TO_SHIP', 'SHIPPED'].map(s => (
               <button key={s} onClick={() => setFilterStatus(s)}
                 style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12,
                   background: filterStatus === s ? '#6366f1' : '#2d3154',
@@ -590,12 +635,18 @@ export default function DelayedOrdersPage() {
                         </button>
                       )}
                       {order.status === 'PACKED' && (
+                        <button onClick={() => updateOrderStatus(order.id, 'READY_TO_SHIP')}
+                          style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, background: 'rgba(52,211,153,0.15)', color: '#34d399', fontWeight: 600 }}>
+                          📦✅ เตรียมส่ง
+                        </button>
+                      )}
+                      {order.status === 'READY_TO_SHIP' && (
                         <button onClick={() => updateOrderStatus(order.id, 'SHIPPED')}
                           style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, background: 'rgba(74,222,128,0.15)', color: '#4ade80', fontWeight: 600 }}>
                           🚚 ส่งแล้ว
                         </button>
                       )}
-                      {(order.status === 'PENDING' || order.status === 'PACKED') && (
+                      {['PENDING', 'PACKED', 'READY_TO_SHIP'].includes(order.status) && (
                         <button onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
                           style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>
                           ❌
