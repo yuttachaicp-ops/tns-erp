@@ -27,19 +27,28 @@ const SHOPS = [
 function getShop(key: string) { return SHOPS.find(s => s.key === key) || SHOPS[0] }
 interface CountEntry { status: string; _count: { id: number } }
 
-/* ────────── Urgency ────────── */
-function getUrgency(shipByDate: string | null, orderStatus: string): { label: string; color: string; bg: string; rank: number } {
+/* ────────── Cancel deadline: orderDate + 4 days (platform auto-cancels on day 5) ────────── */
+function getCancelDeadline(orderDate: string | null): Date | null {
+  if (!orderDate) return null
+  const d = new Date(orderDate)
+  if (isNaN(d.getTime())) return null
+  d.setDate(d.getDate() + 4) // must ship by day 4, platform cancels on day 5
+  return d
+}
+
+function getUrgency(orderDate: string | null, orderStatus: string): { label: string; color: string; bg: string; rank: number } {
   if (orderStatus === 'การจัดส่ง') return { label: '🚚 กำลังจัดส่ง', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', rank: 4 }
-  if (!shipByDate) return { label: '⚪ ไม่มีกำหนด', color: '#64748b', bg: 'rgba(100,116,139,0.1)', rank: 3 }
+  const deadline = getCancelDeadline(orderDate)
+  if (!deadline) return { label: '⚪ ไม่มีกำหนด', color: '#64748b', bg: 'rgba(100,116,139,0.1)', rank: 3 }
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const ship  = new Date(shipByDate)
-  const shipDay = new Date(ship.getFullYear(), ship.getMonth(), ship.getDate())
-  const diff  = Math.floor((shipDay.getTime() - today.getTime()) / 86400000)
-  if (diff < 0)  return { label: '🔴 เกินกำหนด', color: '#f87171', bg: 'rgba(248,113,113,0.12)', rank: 0 }
-  if (diff === 0) return { label: '🟠 วันนี้',    color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  rank: 1 }
-  if (diff === 1) return { label: '🟡 พรุ่งนี้',  color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', rank: 2 }
-  return { label: `⚪ อีก ${diff} วัน`, color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', rank: 3 }
+  const deadDay = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate())
+  const diff = Math.floor((deadDay.getTime() - today.getTime()) / 86400000)
+  if (diff < 0)  return { label: '🔴 เกินกำหนด',    color: '#f87171', bg: 'rgba(248,113,113,0.15)', rank: 0 }
+  if (diff === 0) return { label: '🚨 วันสุดท้าย!', color: '#ef4444', bg: 'rgba(239,68,68,0.18)',   rank: 1 }
+  if (diff === 1) return { label: '🟠 เหลือ 1 วัน', color: '#fb923c', bg: 'rgba(251,146,60,0.15)',  rank: 2 }
+  if (diff === 2) return { label: '🟡 เหลือ 2 วัน', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', rank: 3 }
+  return { label: `⚪ เหลือ ${diff} วัน`,           color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', rank: 4 }
 }
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -360,7 +369,7 @@ export default function DelayedOrdersPage() {
     if (filterStatus  !== 'ALL' && o.status !== filterStatus) return false
     if (filterShop    !== 'ALL' && o.shop   !== filterShop)   return false
     if (filterUrgency !== 'ALL') {
-      const u = getUrgency(o.shipByDate, o.orderStatus)
+      const u = getUrgency(o.orderDate, o.orderStatus)
       if (filterUrgency === 'OVERDUE'   && u.rank !== 0) return false
       if (filterUrgency === 'TODAY'     && u.rank !== 1) return false
       if (filterUrgency === 'TOMORROW'  && u.rank !== 2) return false
@@ -372,8 +381,8 @@ export default function DelayedOrdersPage() {
   const packedCount       = countMap['PACKED']         || 0
   const readyToShipCount  = countMap['READY_TO_SHIP']  || 0
   const shippedCount      = countMap['SHIPPED']        || 0
-  const overdueCount   = orders.filter(o => o.status === 'PENDING' && getUrgency(o.shipByDate, o.orderStatus).rank === 0).length
-  const todayCount     = orders.filter(o => o.status === 'PENDING' && getUrgency(o.shipByDate, o.orderStatus).rank === 1).length
+  const overdueCount   = orders.filter(o => !['SHIPPED','CANCELLED'].includes(o.status) && getUrgency(o.orderDate, o.orderStatus).rank === 0).length
+  const todayCount     = orders.filter(o => !['SHIPPED','CANCELLED'].includes(o.status) && getUrgency(o.orderDate, o.orderStatus).rank === 1).length
 
   return (
     <AppShell>
@@ -459,8 +468,8 @@ export default function DelayedOrdersPage() {
             { label: '📦 แพ็คแล้ว',           value: packedCount,       color: '#60a5fa' },
             { label: '📦✅ เตรียมส่ง',         value: readyToShipCount,  color: '#34d399' },
             { label: '🚚 ส่งแล้ว',            value: shippedCount,      color: '#4ade80' },
-            { label: '🔴 เกินกำหนด',          value: overdueCount,      color: '#f87171' },
-            { label: '🟠 วันนี้',              value: todayCount,        color: '#fb923c' },
+            { label: '🔴 เกินกำหนดยกเลิก',     value: overdueCount,      color: '#f87171' },
+            { label: '🚨 วันสุดท้าย',          value: todayCount,        color: '#ef4444' },
           ].map(c => (
             <div key={c.label} style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 10, padding: '12px 18px', minWidth: 110 }}>
               <div style={{ fontSize: 11, color: '#64748b' }}>{c.label}</div>
@@ -502,10 +511,10 @@ export default function DelayedOrdersPage() {
             ))}
             <span style={{ fontSize: 12, color: '#64748b', marginLeft: 8, marginRight: 4 }}>ความเร่งด่วน:</span>
             {[
-              { key: 'ALL', label: 'ทั้งหมด' },
-              { key: 'OVERDUE', label: '🔴 เกินกำหนด' },
-              { key: 'TODAY', label: '🟠 วันนี้' },
-              { key: 'TOMORROW', label: '🟡 พรุ่งนี้' },
+              { key: 'ALL',      label: 'ทั้งหมด' },
+              { key: 'OVERDUE',  label: '🔴 เกินกำหนด' },
+              { key: 'TODAY',    label: '🚨 วันสุดท้าย' },
+              { key: 'TOMORROW', label: '🟠 เหลือ 1 วัน' },
             ].map(f => (
               <button key={f.key} onClick={() => setFilterUrgency(f.key)}
                 style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12,
@@ -557,7 +566,7 @@ export default function DelayedOrdersPage() {
               </div>
               <div>ความเร่งด่วน</div>
               <div>เลขออร์เดอร์ / ผู้ซื้อ</div>
-              <div>ส่งภายใน</div>
+              <div>ยกเลิกอัตโนมัติ</div>
               <div>เลขพัสดุ</div>
               <div>สินค้า</div>
               <div>สถานะ</div>
@@ -565,7 +574,8 @@ export default function DelayedOrdersPage() {
             </div>
 
             {filtered.map(order => {
-              const u = getUrgency(order.shipByDate, order.orderStatus)
+              const u = getUrgency(order.orderDate, order.orderStatus)
+              const cancelDeadline = getCancelDeadline(order.orderDate)
               const isExpanded = expanded.has(order.id)
               const hasOutOfStock = order.items.some(it => it.isOutOfStock)
 
@@ -612,9 +622,20 @@ export default function DelayedOrdersPage() {
                       <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{order.buyerName || '—'}</div>
                       <div style={{ fontSize: 10, color: '#4a5568' }}>{order.orderStatus}</div>
                     </div>
-                    {/* Ship by */}
-                    <div style={{ fontSize: 12, color: u.color }}>
-                      {order.shipByDate ? new Date(order.shipByDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                    {/* Cancel deadline = orderDate + 4 days */}
+                    <div style={{ fontSize: 12 }}>
+                      {cancelDeadline ? (
+                        <>
+                          <div style={{ color: u.color, fontWeight: 700 }}>
+                            {cancelDeadline.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
+                          </div>
+                          {order.orderDate && (
+                            <div style={{ fontSize: 10, color: '#4a5568', marginTop: 2 }}>
+                              สั่ง {new Date(order.orderDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                            </div>
+                          )}
+                        </>
+                      ) : '—'}
                     </div>
                     {/* Tracking */}
                     <div style={{ fontSize: 11, color: '#818cf8', fontFamily: 'monospace', wordBreak: 'break-all' }}>
