@@ -92,7 +92,7 @@ export default function DashboardPage() {
               <KPICard icon="🛒" label="สินค้ายังไม่ลงขาย"  value={s?.listingQueuePending||0} sub={`ทั้งหมด ${s?.listingQueueTotal||0} รายการ`}  color="#f87171" />
               <KPICard icon="📝"  label="งานวันนี้"           value={s?.todayLogs||0}           sub="บันทึกวันนี้"                                   color="#4ade80" />
               <KPICard icon="⏰"  label="งานค้าง"             value={s?.pendingLogs||0}         sub="รอดำเนินการ"                                    color="#818cf8" />
-              <KPICard icon="📦"  label="ออร์เดอร์ค้างส่ง"   value={s?.delayedOrdersPending||0} sub={`เกินกำหนด ${overdueCount} | วันสุดท้าย ${urgentCount}`} color="#f87171" />
+              <KPICard icon="📦"  label="ออร์เดอร์ที่ต้องรีบส่ง" value={urgentCount} sub={urgentCount > 0 ? 'ต้องส่งวันนี้ก่อนถูกยกเลิก' : 'ไม่มีออร์เดอร์เร่งด่วน'} color="#ef4444" />
             </div>
 
             {/* Platform Pricing */}
