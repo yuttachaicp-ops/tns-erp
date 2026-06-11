@@ -85,9 +85,11 @@ export default function DashboardPage() {
   }, [fetchAll])
 
   const s = data?.summary
-  const allOrders     = data?.urgentOrders ?? []
-  const lastDayOrders = allOrders.filter(o => getCancelDiff(o.orderDate) === 0)
-  const overdueCount  = allOrders.filter(o => { const d = getCancelDiff(o.orderDate); return d !== null && d < 0 }).length
+  const allOrders = data?.urgentOrders ?? []
+  // ใช้ logic เดียวกับหน้าล้าช้า: ข้าม orderStatus 'การจัดส่ง' (Shopee ส่งออกแล้ว ไม่ต้องเร่ง)
+  const isAlreadyShipping = (o: UrgentOrder) => o.orderStatus === 'การจัดส่ง'
+  const lastDayOrders = allOrders.filter(o => !isAlreadyShipping(o) && getCancelDiff(o.orderDate) === 0)
+  const overdueCount  = allOrders.filter(o => { if (isAlreadyShipping(o)) return false; const d = getCancelDiff(o.orderDate); return d !== null && d < 0 }).length
   const urgentCount   = lastDayOrders.length
 
   return (
