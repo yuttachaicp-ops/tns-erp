@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import AppShell from '@/components/layout/AppShell'
 import Header from '@/components/layout/Header'
@@ -61,7 +61,11 @@ export default function DashboardPage() {
   const [pricing, setPricing] = useState<PlatformPricing[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchAll = useCallback((showLoader = false) => {
+    if (showLoader) setLoading(true)
+    setRefreshing(true)
     const token = localStorage.getItem('tns-token')
     Promise.all([
       fetch('/api/dashboard', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
@@ -69,8 +73,16 @@ export default function DashboardPage() {
     ]).then(([dash, price]) => {
       if (dash.success)  setData(dash.data)
       if (price.success) setPricing(price.data)
-    }).finally(() => setLoading(false))
+    }).finally(() => { setLoading(false); setRefreshing(false) })
   }, [])
+
+  useEffect(() => {
+    fetchAll(true)
+    // refetch เมื่อกลับมาที่ tab (หลังอัพโหลดไฟล์ที่หน้าอื่น)
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchAll() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [fetchAll])
 
   const s = data?.summary
   const allOrders     = data?.urgentOrders ?? []
@@ -80,7 +92,16 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <Header title="Dashboard" subtitle="ภาพรวมการดำเนินงานประจำวัน" />
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 24px',paddingTop:'24px'}}>
+        <Header title="Dashboard" subtitle="ภาพรวมการดำเนินงานประจำวัน" />
+        <button onClick={() => fetchAll()} disabled={refreshing}
+          style={{padding:'8px 18px',borderRadius:8,border:'1px solid #2d3154',cursor:'pointer',
+            background: refreshing ? '#2d3154' : '#1a1d2e',
+            color: refreshing ? '#4a5568' : '#818cf8',
+            fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:6}}>
+          {refreshing ? 'กำลังโหลด...' : 'รีเฟรช'}
+        </button>
+      </div>
       <div style={{padding:'24px',flex:1}}>
         {loading ? (
           <div style={{textAlign:'center',padding:'60px',color:'#4a5568'}}>กำลังโหลดข้อมูล...</div>
