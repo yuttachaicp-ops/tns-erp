@@ -2,6 +2,9 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser, successResponse, errorResponse } from '@/lib/api-helpers'
 
+// ป้องกัน Next.js cache — ต้องการข้อมูลสดจาก DB ทุก request
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   const session = await getAuthUser(req)
   if (!session) return errorResponse('Unauthorized', 401)

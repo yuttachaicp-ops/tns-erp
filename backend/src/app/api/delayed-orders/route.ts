@@ -2,6 +2,9 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthUser, successResponse, errorResponse } from '@/lib/api-helpers'
 
+// ป้องกัน Next.js cache — ข้อมูลต้องสดทุก request
+export const dynamic = 'force-dynamic'
+
 // DELETE /api/delayed-orders  – bulk delete
 export async function DELETE(req: NextRequest) {
   const session = await getAuthUser(req)
