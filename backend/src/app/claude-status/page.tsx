@@ -119,45 +119,70 @@ function getMonthStart(): string {
 
 function ClaudeUsageTab() {
   const today       = new Date().toISOString().slice(0, 10)
-  const STORAGE_KEY = 'tns-claude-usage-v1'
   const BUDGET_KEY  = 'tns-claude-budget-v1'
 
   const [entries,     setEntries]     = useState<UsageEntry[]>([])
+  const [loadingLogs, setLoadingLogs] = useState(true)
   const [budget,      setBudget]      = useState({ monthly: 5_000_000, label: '5M tokens/เดือน' })
   const [editBudget,  setEditBudget]  = useState(false)
   const [budgetInput, setBudgetInput] = useState('')
   const [showForm,    setShowForm]    = useState(false)
+  const [saving,      setSaving]      = useState(false)
   const [form, setForm] = useState({
     date: today, inputTokens: '', outputTokens: '',
     cacheReadTokens: '', cacheWriteTokens: '',
     model: 'claude-sonnet-4-6', sessionNote: '',
   })
 
-  useEffect(() => {
+  const fetchLogs = useCallback(async () => {
+    setLoadingLogs(true)
     try {
-      const raw  = localStorage.getItem(STORAGE_KEY); if (raw)  setEntries(JSON.parse(raw))
-      const braw = localStorage.getItem(BUDGET_KEY);  if (braw) setBudget(JSON.parse(braw))
-    } catch { /* ignore */ }
+      const token = localStorage.getItem('tns-token')
+      const res   = await fetch('/api/claude-usage?days=60', { headers: { Authorization: `Bearer ${token}` } })
+      const data  = await res.json()
+      if (data.ok) setEntries(data.logs || [])
+    } catch { /* ignore */ } finally { setLoadingLogs(false) }
   }, [])
 
-  function save(newEntries: UsageEntry[]) {
-    setEntries(newEntries)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newEntries))
+  useEffect(() => {
+    fetchLogs()
+    try {
+      const braw = localStorage.getItem(BUDGET_KEY)
+      if (braw) setBudget(JSON.parse(braw))
+    } catch { /* ignore */ }
+  }, [fetchLogs])
+
+  async function submitEntry() {
+    setSaving(true)
+    const total = (Number(form.inputTokens)||0) + (Number(form.outputTokens)||0) +
+                  (Number(form.cacheReadTokens)||0) + (Number(form.cacheWriteTokens)||0)
+    if (total === 0) { setSaving(false); return }
+    try {
+      await fetch('/api/claude-usage/auto-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cron-secret': 'tns-cron-cleanup-2026' },
+        body: JSON.stringify({
+          date: form.date, model: form.model, sessionNote: form.sessionNote,
+          inputTokens: Number(form.inputTokens)||0, outputTokens: Number(form.outputTokens)||0,
+          cacheReadTokens: Number(form.cacheReadTokens)||0, cacheWriteTokens: Number(form.cacheWriteTokens)||0,
+          autoLogged: false,
+        }),
+      })
+      setForm({ date: today, inputTokens: '', outputTokens: '', cacheReadTokens: '', cacheWriteTokens: '', model: 'claude-sonnet-4-6', sessionNote: '' })
+      setShowForm(false)
+      await fetchLogs()
+    } finally { setSaving(false) }
   }
-  function submitEntry() {
-    const entry: UsageEntry = {
-      id: Date.now().toString(), date: form.date,
-      inputTokens:      Number(form.inputTokens)      || 0,
-      outputTokens:     Number(form.outputTokens)     || 0,
-      cacheReadTokens:  Number(form.cacheReadTokens)  || 0,
-      cacheWriteTokens: Number(form.cacheWriteTokens) || 0,
-      model: form.model, sessionNote: form.sessionNote,
-    }
-    save([entry, ...entries])
-    setForm({ date: today, inputTokens: '', outputTokens: '', cacheReadTokens: '', cacheWriteTokens: '', model: 'claude-sonnet-4-6', sessionNote: '' })
-    setShowForm(false)
+
+  async function deleteEntry(id: string) {
+    const token = localStorage.getItem('tns-token')
+    await fetch('/api/claude-usage', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id }),
+    })
+    setEntries(prev => prev.filter(e => e.id !== id))
   }
-  function deleteEntry(id: string) { save(entries.filter(e => e.id !== id)) }
 
   function sumTokens(arr: UsageEntry[]) {
     return arr.reduce((a, e) => ({
@@ -201,6 +226,17 @@ function ClaudeUsageTab() {
 
   return (
     <div>
+      {/* Auto-log badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, padding: '10px 16px',
+        background: 'rgba(74,222,128,0.07)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 10 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px #4ade80' }} />
+        <span style={{ fontSize: 12, color: '#4ade80', fontWeight: 600 }}>Auto-logging เปิดอยู่</span>
+        <span style={{ fontSize: 11, color: '#4a5568' }}>— บันทึกอัตโนมัติทุกครั้งที่ Cowork session จบ</span>
+        <button onClick={fetchLogs} style={{ marginLeft: 'auto', fontSize: 11, color: '#818cf8', background: 'none', border: 'none', cursor: 'pointer' }}>
+          รีเฟรช
+        </button>
+      </div>
+
       {/* Budget Bar */}
       <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 14, padding: '18px 20px', marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -263,7 +299,6 @@ function ClaudeUsageTab() {
 
       {/* Chart + Model breakdown */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-        {/* 7-day bar chart */}
         <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 12, padding: '16px 18px' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 14 }}>7 วันล่าสุด</div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 80 }}>
@@ -283,17 +318,15 @@ function ClaudeUsageTab() {
             })}
           </div>
         </div>
-
-        {/* Model breakdown */}
         <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 12, padding: '16px 18px' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 14 }}>Models (เดือนนี้)</div>
           {modelBreakdown.length === 0 ? (
-            <div style={{ color: '#3a4060', fontSize: 12, textAlign: 'center', paddingTop: 20 }}>ยังไม่มีข้อมูล</div>
+            <div style={{ color: '#3a4060', fontSize: 12, textAlign: 'center', paddingTop: 20 }}>รอ auto-log session แรก...</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {modelBreakdown.slice(0, 5).map(([model, total]) => {
-                const info = MODELS_SHORT[model] || { label: model.slice(0, 16), color: '#64748b' }
-                const pct = Math.round((total / Math.max(monthTotal, 1)) * 100)
+                const info = MODELS_SHORT[model] || { label: model.replace('claude-', '').slice(0, 16), color: '#64748b' }
+                const pct  = Math.round((total / Math.max(monthTotal, 1)) * 100)
                 return (
                   <div key={model}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
@@ -311,19 +344,19 @@ function ClaudeUsageTab() {
         </div>
       </div>
 
-      {/* Log Button */}
+      {/* Manual Log Button */}
       <div style={{ marginBottom: 16 }}>
         <button onClick={() => setShowForm(!showForm)}
           style={{ padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13,
-            background: showForm ? '#2d3154' : '#6366f1', color: 'white' }}>
-          {showForm ? 'ยกเลิก' : '+ บันทึกการใช้งานวันนี้'}
+            background: showForm ? '#2d3154' : 'rgba(99,102,241,0.2)', color: showForm ? '#94a3b8' : '#818cf8',
+            border: '1px solid rgba(99,102,241,0.3)' }}>
+          {showForm ? 'ยกเลิก' : '+ บันทึกเพิ่มเติมเอง'}
         </button>
       </div>
 
-      {/* Log Form */}
       {showForm && (
         <div style={{ background: '#1a1d2e', border: '1px solid #6366f140', borderRadius: 12, padding: '20px', marginBottom: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#818cf8', marginBottom: 16 }}>บันทึก Session</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#818cf8', marginBottom: 16 }}>บันทึก Session (Manual)</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>วันที่</div>
@@ -331,40 +364,36 @@ function ClaudeUsageTab() {
             </div>
             <div>
               <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Model</div>
-              <select value={form.model} onChange={e => setForm({ ...form, model: e.target.value })}
-                style={{ ...inputSt, cursor: 'pointer' }}>
-                {Object.entries(MODELS_SHORT).map(([k, v]) => (
-                  <option key={k} value={k}>{v.label}</option>
-                ))}
+              <select value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} style={{ ...inputSt, cursor: 'pointer' }}>
+                {Object.entries(MODELS_SHORT).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 <option value="other">Other</option>
               </select>
             </div>
             <div>
               <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Input Tokens</div>
-              <input type="number" value={form.inputTokens} onChange={e => setForm({ ...form, inputTokens: e.target.value })} style={inputSt} placeholder="เช่น 50000" />
+              <input type="number" value={form.inputTokens} onChange={e => setForm({ ...form, inputTokens: e.target.value })} style={inputSt} placeholder="0" />
             </div>
             <div>
               <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Output Tokens</div>
-              <input type="number" value={form.outputTokens} onChange={e => setForm({ ...form, outputTokens: e.target.value })} style={inputSt} placeholder="เช่น 10000" />
+              <input type="number" value={form.outputTokens} onChange={e => setForm({ ...form, outputTokens: e.target.value })} style={inputSt} placeholder="0" />
             </div>
             <div>
               <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Cache Read Tokens</div>
-              <input type="number" value={form.cacheReadTokens} onChange={e => setForm({ ...form, cacheReadTokens: e.target.value })} style={inputSt} placeholder="เช่น 8800000" />
+              <input type="number" value={form.cacheReadTokens} onChange={e => setForm({ ...form, cacheReadTokens: e.target.value })} style={inputSt} placeholder="0" />
             </div>
             <div>
               <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Cache Write Tokens</div>
-              <input type="number" value={form.cacheWriteTokens} onChange={e => setForm({ ...form, cacheWriteTokens: e.target.value })} style={inputSt} placeholder="เช่น 200000" />
+              <input type="number" value={form.cacheWriteTokens} onChange={e => setForm({ ...form, cacheWriteTokens: e.target.value })} style={inputSt} placeholder="0" />
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>หมายเหตุ</div>
-              <input type="text" value={form.sessionNote} onChange={e => setForm({ ...form, sessionNote: e.target.value })}
-                style={inputSt} placeholder="เช่น พัฒนา Dashboard delayed-orders" />
+              <input type="text" value={form.sessionNote} onChange={e => setForm({ ...form, sessionNote: e.target.value })} style={inputSt} placeholder="เช่น พัฒนาระบบ ERP" />
             </div>
           </div>
           <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
-            <button onClick={submitEntry}
+            <button onClick={submitEntry} disabled={saving}
               style={{ padding: '9px 22px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#4ade80', color: '#0f1117', fontWeight: 700, fontSize: 13 }}>
-              บันทึก
+              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
             <button onClick={() => setShowForm(false)}
               style={{ padding: '9px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#2d3154', color: '#94a3b8', fontSize: 13 }}>
@@ -377,18 +406,25 @@ function ClaudeUsageTab() {
       {/* History */}
       <div>
         <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>ประวัติ Sessions</div>
-        {entries.length === 0 ? (
-          <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 12, padding: '32px', textAlign: 'center', color: '#3a4060' }}>
-            ยังไม่มีข้อมูล — กด "บันทึกการใช้งานวันนี้" เพื่อเริ่มต้น
+        {loadingLogs ? (
+          <div style={{ textAlign: 'center', padding: 30, color: '#4a5568' }}>กำลังโหลด...</div>
+        ) : entries.length === 0 ? (
+          <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>🤖</div>
+            <div style={{ color: '#4a5568', fontSize: 13 }}>รอ session แรกจาก Cowork...</div>
+            <div style={{ color: '#3a4060', fontSize: 11, marginTop: 6 }}>ข้อมูลจะบันทึกอัตโนมัติเมื่อ session จบ</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {entries.slice(0, 20).map(e => {
+            {entries.map(e => {
               const total = e.inputTokens + e.outputTokens + e.cacheReadTokens + e.cacheWriteTokens
-              const info  = MODELS_SHORT[e.model] || { label: e.model, color: '#64748b' }
+              const info  = MODELS_SHORT[e.model] || { label: e.model.replace('claude-', '').slice(0, 18) || '?', color: '#64748b' }
               return (
                 <div key={e.id} style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ minWidth: 70, fontSize: 11, color: '#4a5568' }}>{e.date}</div>
+                  <div style={{ minWidth: 80, fontSize: 11, color: '#4a5568' }}>
+                    {e.date}
+                    {e.autoLogged && <div style={{ fontSize: 9, color: '#4ade80', marginTop: 2 }}>auto</div>}
+                  </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 5, background: `${info.color}20`, color: info.color, fontWeight: 600 }}>{info.label}</span>
