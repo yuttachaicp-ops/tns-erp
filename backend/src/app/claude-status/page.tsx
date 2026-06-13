@@ -347,9 +347,8 @@ function ClaudeUsageTab() {
       {/* Manual Log Button */}
       <div style={{ marginBottom: 16 }}>
         <button onClick={() => setShowForm(!showForm)}
-          style={{ padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13,
-            background: showForm ? '#2d3154' : 'rgba(99,102,241,0.2)', color: showForm ? '#94a3b8' : '#818cf8',
-            border: '1px solid rgba(99,102,241,0.3)' }}>
+          style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer', fontWeight: 700, fontSize: 13,
+            background: showForm ? '#2d3154' : 'rgba(99,102,241,0.2)', color: showForm ? '#94a3b8' : '#818cf8' }}>
           {showForm ? 'ยกเลิก' : '+ บันทึกเพิ่มเติมเอง'}
         </button>
       </div>
