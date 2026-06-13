@@ -10,6 +10,7 @@ from urllib.error import URLError
 
 ERP_URL    = 'https://tns-erp.onrender.com/api/claude-usage/auto-log'
 ERP_SECRET = 'tns-cron-cleanup-2026'
+USER_NAME  = 'Tany_Yuttachai'
 
 def main():
     try:
@@ -59,6 +60,7 @@ def main():
 
     payload = json.dumps({
         'date':             datetime.now().strftime('%Y-%m-%d'),
+        'user':             USER_NAME,
         'inputTokens':      total_input,
         'outputTokens':     total_output,
         'cacheReadTokens':  total_cache_read,

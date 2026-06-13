@@ -12,13 +12,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { date, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, model, sessionId, sessionNote, autoLogged } = body
+    const { date, user, inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, model, sessionId, sessionNote, autoLogged } = body
     const total = (inputTokens || 0) + (outputTokens || 0) + (cacheReadTokens || 0) + (cacheWriteTokens || 0)
     if (total === 0) return NextResponse.json({ ok: true, skipped: true })
 
     const entry = await prisma.claudeUsageLog.create({
       data: {
         date:             date || new Date().toISOString().slice(0, 10),
+        user:             user             || '',
         inputTokens:      inputTokens      || 0,
         outputTokens:     outputTokens     || 0,
         cacheReadTokens:  cacheReadTokens  || 0,
