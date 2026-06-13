@@ -17,6 +17,7 @@ interface StatusData {
 interface UsageEntry {
   id: string; date: string; inputTokens: number; outputTokens: number
   cacheReadTokens: number; cacheWriteTokens: number; model: string; sessionNote: string
+  autoLogged?: boolean
 }
 
 /* ─────────────────── Translation helpers ─────────────────── */
