@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import AppShell from '@/components/layout/AppShell'
 import Header from '@/components/layout/Header'
 
@@ -153,12 +153,360 @@ const COMPONENT_NAME_TH: Record<string, string> = {
   'Claude for Government':               'Claude สำหรับภาครัฐ',
 }
 
+
+/* ===== USAGE TAB ===== */
+
+interface UsageEntry {
+  id: string
+  date: string          // YYYY-MM-DD
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  model: string
+  sessionNote: string
+}
+
+const MODELS_SHORT: Record<string, { label: string; color: string }> = {
+  'claude-opus-4-5':       { label: 'Opus 4.5',   color: '#f59e0b' },
+  'claude-opus-4-6':       { label: 'Opus 4.6',   color: '#f59e0b' },
+  'claude-sonnet-4-5':     { label: 'Sonnet 4.5', color: '#818cf8' },
+  'claude-sonnet-4-6':     { label: 'Sonnet 4.6', color: '#818cf8' },
+  'claude-haiku-4-5':      { label: 'Haiku 4.5',  color: '#34d399' },
+  'claude-haiku-4-5-20251001': { label: 'Haiku 4.5', color: '#34d399' },
+  'claude-3-5-sonnet-20241022': { label: 'Sonnet 3.5', color: '#a78bfa' },
+  'claude-3-5-haiku-20241022':  { label: 'Haiku 3.5',  color: '#6ee7b7' },
+}
+
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M'
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K'
+  return String(n)
+}
+
+function getWeekStart(): string {
+  const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d.toISOString().slice(0, 10)
+}
+function getMonthStart(): string {
+  const d = new Date(); d.setDate(1); return d.toISOString().slice(0, 10)
+}
+
+function ClaudeUsageTab() {
+  const today = new Date().toISOString().slice(0, 10)
+  const STORAGE_KEY = 'tns-claude-usage-v1'
+  const BUDGET_KEY  = 'tns-claude-budget-v1'
+
+  const [entries,     setEntries]     = React.useState<UsageEntry[]>([])
+  const [budget,      setBudget]      = React.useState({ monthly: 5_000_000, label: '5M tokens/เดือน' })
+  const [editBudget,  setEditBudget]  = React.useState(false)
+  const [budgetInput, setBudgetInput] = React.useState('')
+  const [showForm,    setShowForm]    = React.useState(false)
+  const [form, setForm] = React.useState({
+    date: today, inputTokens: '', outputTokens: '',
+    cacheReadTokens: '', cacheWriteTokens: '', model: 'claude-sonnet-4-6', sessionNote: '',
+  })
+
+  // Load from localStorage
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) setEntries(JSON.parse(raw))
+      const braw = localStorage.getItem(BUDGET_KEY)
+      if (braw) setBudget(JSON.parse(braw))
+    } catch { /* ignore */ }
+  }, [])
+
+  function save(newEntries: UsageEntry[]) {
+    setEntries(newEntries)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newEntries))
+  }
+
+  function submitEntry() {
+    const entry: UsageEntry = {
+      id: Date.now().toString(),
+      date: form.date,
+      inputTokens:      Number(form.inputTokens)      || 0,
+      outputTokens:     Number(form.outputTokens)     || 0,
+      cacheReadTokens:  Number(form.cacheReadTokens)  || 0,
+      cacheWriteTokens: Number(form.cacheWriteTokens) || 0,
+      model:       form.model,
+      sessionNote: form.sessionNote,
+    }
+    save([entry, ...entries])
+    setForm({ date: today, inputTokens: '', outputTokens: '', cacheReadTokens: '', cacheWriteTokens: '', model: 'claude-sonnet-4-6', sessionNote: '' })
+    setShowForm(false)
+  }
+
+  function deleteEntry(id: string) { save(entries.filter(e => e.id !== id)) }
+
+  // Aggregations
+  const todayEntries  = entries.filter(e => e.date === today)
+  const weekEntries   = entries.filter(e => e.date >= getWeekStart())
+  const monthEntries  = entries.filter(e => e.date >= getMonthStart())
+
+  function sumTokens(arr: UsageEntry[]) {
+    return arr.reduce((a, e) => ({
+      input:      a.input      + e.inputTokens,
+      output:     a.output     + e.outputTokens,
+      cacheRead:  a.cacheRead  + e.cacheReadTokens,
+      cacheWrite: a.cacheWrite + e.cacheWriteTokens,
+    }), { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 })
+  }
+
+  const todaySum  = sumTokens(todayEntries)
+  const weekSum   = sumTokens(weekEntries)
+  const monthSum  = sumTokens(monthEntries)
+  const monthTotal = monthSum.input + monthSum.output + monthSum.cacheRead + monthSum.cacheWrite
+  const budgetPct  = Math.min(100, Math.round((monthTotal / budget.monthly) * 100))
+
+  // Model breakdown this month
+  const modelMap: Record<string, number> = {}
+  monthEntries.forEach(e => {
+    const total = e.inputTokens + e.outputTokens + e.cacheReadTokens + e.cacheWriteTokens
+    modelMap[e.model] = (modelMap[e.model] || 0) + total
+  })
+  const modelBreakdown = Object.entries(modelMap).sort((a, b) => b[1] - a[1])
+
+  // Last 7 days chart
+  const last7: string[] = []
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i); last7.push(d.toISOString().slice(0, 10))
+  }
+  const dailyTotals = last7.map(d => {
+    const s = sumTokens(entries.filter(e => e.date === d))
+    return s.input + s.output + s.cacheRead + s.cacheWrite
+  })
+  const maxDaily = Math.max(...dailyTotals, 1)
+
+  const inputStyle = {
+    padding: '8px 12px', borderRadius: 8, background: '#0f1117',
+    border: '1px solid #2d3154', color: 'white', fontSize: 13, outline: 'none', width: '100%',
+  }
+
+  return (
+    <div>
+      {/* Budget Bar */}
+      <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 14, padding: '18px 20px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8' }}>Budget เดือนนี้</span>
+            <span style={{ marginLeft: 10, fontSize: 12, color: '#4a5568' }}>({budget.label})</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 18, fontWeight: 800, color: budgetPct > 90 ? '#f87171' : budgetPct > 70 ? '#fb923c' : '#4ade80' }}>
+              {budgetPct}%
+            </span>
+            {!editBudget ? (
+              <button onClick={() => { setEditBudget(true); setBudgetInput(String(budget.monthly)) }}
+                style={{ fontSize: 11, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer' }}>แก้ไข</button>
+            ) : (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input type="number" value={budgetInput} onChange={e => setBudgetInput(e.target.value)}
+                  style={{ ...inputStyle, width: 120 }} placeholder="เช่น 5000000" />
+                <button onClick={() => {
+                  const v = Number(budgetInput) || 5_000_000
+                  const b = { monthly: v, label: fmtNum(v) + ' tokens/เดือน' }
+                  setBudget(b); localStorage.setItem(BUDGET_KEY, JSON.stringify(b)); setEditBudget(false)
+                }} style={{ padding: '6px 12px', borderRadius: 6, background: '#6366f1', color: 'white', border: 'none', cursor: 'pointer', fontSize: 12 }}>บันทึก</button>
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{ background: '#0f1117', borderRadius: 999, height: 10, overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: 999, width: `${budgetPct}%`, transition: 'width 0.5s',
+            background: budgetPct > 90 ? '#f87171' : budgetPct > 70 ? '#fb923c' : '#4ade80' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: '#4a5568' }}>
+          <span>{fmtNum(monthTotal)} tokens ใช้ไปแล้ว</span>
+          <span>เหลือ {fmtNum(Math.max(0, budget.monthly - monthTotal))} tokens</span>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+        {[
+          { label: 'วันนี้', sum: todaySum,  color: '#818cf8' },
+          { label: 'สัปดาห์นี้', sum: weekSum,  color: '#34d399' },
+          { label: 'เดือนนี้', sum: monthSum, color: '#fbbf24' },
+        ].map(({ label, sum, color }) => {
+          const total = sum.input + sum.output + sum.cacheRead + sum.cacheWrite
+          return (
+            <div key={label} style={{ background: '#1a1d2e', border: `1px solid ${color}30`, borderRadius: 12, padding: '14px 16px' }}>
+              <div style={{ fontSize: 11, color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>{label}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color }}>{fmtNum(total)}</div>
+              <div style={{ fontSize: 10, color: '#3a4060', marginTop: 6, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <span>⬆️ In: {fmtNum(sum.input)}</span>
+                <span>⬇️ Out: {fmtNum(sum.output)}</span>
+                <span>📖 CR: {fmtNum(sum.cacheRead)}</span>
+                <span>✍️ CW: {fmtNum(sum.cacheWrite)}</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 7-day chart + Model breakdown */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+        {/* Bar chart */}
+        <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 14 }}>7 วันล่าสุด</div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 80 }}>
+            {last7.map((d, i) => {
+              const pct = dailyTotals[i] / maxDaily
+              const isToday = d === today
+              return (
+                <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{
+                    width: '100%', height: Math.max(4, pct * 64), borderRadius: 4,
+                    background: isToday ? '#818cf8' : '#2d3154',
+                    border: isToday ? '1px solid #6366f1' : 'none',
+                  }} />
+                  <div style={{ fontSize: 9, color: isToday ? '#818cf8' : '#3a4060' }}>
+                    {new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'numeric' })}
+                  </div>
+                  {dailyTotals[i] > 0 && (
+                    <div style={{ fontSize: 9, color: '#64748b' }}>{fmtNum(dailyTotals[i])}</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Model breakdown */}
+        <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 12, padding: '16px 18px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 14 }}>Models (เดือนนี้)</div>
+          {modelBreakdown.length === 0 ? (
+            <div style={{ color: '#3a4060', fontSize: 12, textAlign: 'center', paddingTop: 20 }}>ยังไม่มีข้อมูล</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {modelBreakdown.slice(0, 5).map(([model, total]) => {
+                const info = MODELS_SHORT[model] || { label: model.slice(0, 16), color: '#64748b' }
+                const pct = Math.round((total / monthTotal) * 100)
+                return (
+                  <div key={model}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                      <span style={{ fontSize: 11, color: info.color, fontWeight: 600 }}>{info.label}</span>
+                      <span style={{ fontSize: 11, color: '#64748b' }}>{fmtNum(total)} ({pct}%)</span>
+                    </div>
+                    <div style={{ background: '#0f1117', borderRadius: 999, height: 5 }}>
+                      <div style={{ height: '100%', borderRadius: 999, width: `${pct}%`, background: info.color }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Log Button + Form */}
+      <div style={{ marginBottom: 16 }}>
+        <button onClick={() => setShowForm(!showForm)}
+          style={{ padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13,
+            background: showForm ? '#2d3154' : '#6366f1', color: 'white' }}>
+          {showForm ? '✕ ยกเลิก' : '+ บันทึกการใช้งานวันนี้'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div style={{ background: '#1a1d2e', border: '1px solid #6366f140', borderRadius: 12, padding: '20px', marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#818cf8', marginBottom: 16 }}>บันทึก Session</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>วันที่</div>
+              <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} style={inputStyle} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>Model</div>
+              <select value={form.model} onChange={e => setForm({...form, model: e.target.value})}
+                style={{ ...inputStyle, cursor: 'pointer' }}>
+                {Object.entries(MODELS_SHORT).map(([k, v]) => (
+                  <option key={k} value={k}>{v.label}</option>
+                ))}
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>⬆️ Input Tokens</div>
+              <input type="number" value={form.inputTokens} onChange={e => setForm({...form, inputTokens: e.target.value})} style={inputStyle} placeholder="เช่น 50000" />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>⬇️ Output Tokens</div>
+              <input type="number" value={form.outputTokens} onChange={e => setForm({...form, outputTokens: e.target.value})} style={inputStyle} placeholder="เช่น 10000" />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>📖 Cache Read Tokens</div>
+              <input type="number" value={form.cacheReadTokens} onChange={e => setForm({...form, cacheReadTokens: e.target.value})} style={inputStyle} placeholder="เช่น 8800000" />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>✍️ Cache Write Tokens</div>
+              <input type="number" value={form.cacheWriteTokens} onChange={e => setForm({...form, cacheWriteTokens: e.target.value})} style={inputStyle} placeholder="เช่น 200000" />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>หมายเหตุ (เช่น งานที่ทำ)</div>
+              <input type="text" value={form.sessionNote} onChange={e => setForm({...form, sessionNote: e.target.value})} style={inputStyle} placeholder="เช่น พัฒนา Dashboard delayed-orders" />
+            </div>
+          </div>
+          <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
+            <button onClick={submitEntry}
+              style={{ padding: '9px 22px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#4ade80', color: '#0f1117', fontWeight: 700, fontSize: 13 }}>
+              บันทึก
+            </button>
+            <button onClick={() => setShowForm(false)}
+              style={{ padding: '9px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#2d3154', color: '#94a3b8', fontSize: 13 }}>
+              ยกเลิก
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* History */}
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>ประวัติ Sessions</div>
+        {entries.length === 0 ? (
+          <div style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 12, padding: '32px', textAlign: 'center', color: '#3a4060' }}>
+            ยังไม่มีข้อมูล — กด "บันทึกการใช้งานวันนี้" เพื่อเริ่มต้น
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {entries.slice(0, 20).map(e => {
+              const total = e.inputTokens + e.outputTokens + e.cacheReadTokens + e.cacheWriteTokens
+              const info = MODELS_SHORT[e.model] || { label: e.model, color: '#64748b' }
+              return (
+                <div key={e.id} style={{ background: '#1a1d2e', border: '1px solid #2d3154', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ minWidth: 70, fontSize: 11, color: '#4a5568' }}>{e.date}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 5, background: `${info.color}20`, color: info.color, fontWeight: 600 }}>{info.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>{fmtNum(total)} tokens</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: '#3a4060', marginTop: 3 }}>
+                      In:{fmtNum(e.inputTokens)} Out:{fmtNum(e.outputTokens)} CR:{fmtNum(e.cacheReadTokens)} CW:{fmtNum(e.cacheWriteTokens)}
+                      {e.sessionNote && <span style={{ color: '#64748b', marginLeft: 8 }}>· {e.sessionNote}</span>}
+                    </div>
+                  </div>
+                  <button onClick={() => deleteEntry(e.id)}
+                    style={{ padding: '4px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', background: 'rgba(248,113,113,0.1)', color: '#f87171', fontSize: 11 }}>
+                    ลบ
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function ClaudeStatusPage() {
   const [data, setData] = useState<StatusData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'status' | 'usage'>('status')
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -191,10 +539,24 @@ export default function ClaudeStatusPage() {
   return (
     <AppShell>
       <Header
-        title="🤖 Claude API Status"
+        title="🤖 Claude Status"
         subtitle={lastUpdated ? `อัพเดทล่าสุด: ${lastUpdated.toLocaleTimeString('th-TH')} · รีเฟรชอัตโนมัติทุก 1 นาที` : 'กำลังโหลด...'}
       />
+      {/* Tab switcher */}
+      <div style={{ padding: '0 24px', borderBottom: '1px solid #2d3154', display: 'flex', gap: 0 }}>
+        {([['status', '🖥️ สถานะระบบ'], ['usage', '📊 การใช้งาน']] as const).map(([tab, label]) => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            style={{ padding: '12px 24px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, background: 'none',
+              color: activeTab === tab ? '#818cf8' : '#4a5568',
+              borderBottom: activeTab === tab ? '2px solid #818cf8' : '2px solid transparent',
+              transition: 'all 0.15s' }}>
+            {label}
+          </button>
+        ))}
+      </div>
       <div style={{ padding: 24, flex: 1 }}>
+        {activeTab === 'usage' && <ClaudeUsageTab />}
+        {activeTab === 'status' && (
 
         {loading && (
           <div style={{ textAlign: 'center', padding: 60, color: '#4a5568', fontSize: 16 }}>
@@ -413,6 +775,7 @@ export default function ClaudeStatusPage() {
             </div>
           </>
         )}
+      )}
       </div>
     </AppShell>
   )
