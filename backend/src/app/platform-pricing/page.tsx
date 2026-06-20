@@ -12,8 +12,10 @@ interface PlatformPricing {
 }
 
 const PLATFORM_LABEL: Record<string, { label: string; icon: string; color: string }> = {
-  SHOPEE: { label: 'Shopee', icon: '🧡', color: '#fb923c' },
-  LAZADA: { label: 'Lazada', icon: '💜', color: '#a78bfa' },
+  SHOPEE:         { label: 'Shopee',          icon: '🧡', color: '#fb923c' },
+  LAZADA:         { label: 'Lazada',          icon: '💜', color: '#a78bfa' },
+  SHOPEE_SUNTREE: { label: 'Shopee Suntree',  icon: '🌳', color: '#f97316' },
+  LAZADA_SUNTREE: { label: 'Lazada Suntree',  icon: '🌿', color: '#818cf8' },
 }
 
 export default function PlatformPricingPage() {

@@ -127,12 +127,13 @@ export default function DashboardPage() {
                 </div>
                 <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
                   {pricing.map(p => {
-                    const isShopee = p.platform === 'SHOPEE'
+                    const isShopee = p.platform.startsWith('SHOPEE')
                     const color = isShopee ? '#fb923c' : '#a78bfa'
                     const bg    = isShopee ? 'rgba(251,146,60,0.08)' : 'rgba(167,139,250,0.08)'
+                    const LABEL: Record<string,string> = { SHOPEE:'Shopee', LAZADA:'Lazada', SHOPEE_SUNTREE:'Shopee Suntree', LAZADA_SUNTREE:'Lazada Suntree' }
                     return (
                       <div key={p.id} style={{background: bg, border:`1px solid ${color}30`, borderRadius:12, padding:'14px 20px', display:'flex', alignItems:'center', gap:14, minWidth:180}}>
-                        <div style={{fontSize:13,fontWeight:800,color}}>{p.platform}</div>
+                        <div style={{fontSize:13,fontWeight:800,color}}>{LABEL[p.platform] || p.platform}</div>
                         <div>
                           <div style={{fontSize:22,fontWeight:800,color}}>x{p.multiplier}</div>
                           {p.note && <div style={{fontSize:11,color:'#4a5568',marginTop:2}}>{p.note}</div>}

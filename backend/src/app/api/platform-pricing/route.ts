@@ -3,8 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { getAuthUser, successResponse, errorResponse } from '@/lib/api-helpers'
 
 const DEFAULTS = [
-  { platform: 'SHOPEE', multiplier: 1.15, commission: 5.0, note: 'รวมค่า GP Shopee' },
-  { platform: 'LAZADA', multiplier: 1.12, commission: 4.5, note: 'รวมค่า GP Lazada' },
+  { platform: 'SHOPEE',         multiplier: 1.15, commission: 5.0, note: 'รวมค่า GP Shopee' },
+  { platform: 'LAZADA',         multiplier: 1.12, commission: 4.5, note: 'รวมค่า GP Lazada' },
+  { platform: 'SHOPEE_SUNTREE', multiplier: 1.15, commission: 5.0, note: 'รวมค่า GP Shopee (Suntree)' },
+  { platform: 'LAZADA_SUNTREE', multiplier: 1.12, commission: 4.5, note: 'รวมค่า GP Lazada (Suntree)' },
 ]
 
 export async function GET(req: NextRequest) {
