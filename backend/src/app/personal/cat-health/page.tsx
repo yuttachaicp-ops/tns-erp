@@ -134,7 +134,7 @@ export default function CatHealth() {
     if (r.ok) setVaccs(await r.json())
   }, [catId])
 
-  useEffect(() => { fetchCats() }, [])
+  useEffect(() => { fetchCats() }, [fetchCats])
   useEffect(() => { if (tab === 'daily') fetchLogs() }, [tab, catId, fetchLogs])
   useEffect(() => { if (tab === 'vet') fetchVets() }, [tab, catId, fetchVets])
   useEffect(() => { if (tab === 'vacc') fetchVaccs() }, [tab, catId, fetchVaccs])

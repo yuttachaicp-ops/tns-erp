@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "TNS ERP",
+    "slug": "tns-erp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#0f1117"
+      },
+      "package": "co.th.prathan.tns_erp",
+      "versionCode": 1,
+      "permissions": ["INTERNET"]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b3a4b0c7-edde-4a1f-a92f-76290b8df631"
+      }
+    }
+  }
+}
